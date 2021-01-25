@@ -7,12 +7,14 @@ plugins {
 group = "com.qianlei"
 version = "1.0-SNAPSHOT"
 
-
-subprojects {
-    apply(plugin = "kotlin")
+allprojects {
     repositories {
         mavenCentral()
     }
+}
+
+subprojects {
+    apply(plugin = "kotlin")
 
     dependencies {
         implementation("org.jetbrains.kotlin:kotlin-reflect")
