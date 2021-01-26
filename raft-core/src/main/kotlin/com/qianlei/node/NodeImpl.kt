@@ -9,6 +9,7 @@ import com.qianlei.rpc.message.*
 import com.qianlei.schedule.ElectionTimeout
 import com.qianlei.schedule.LogReplicationTask
 import mu.KotlinLogging
+import kotlin.math.min
 
 @Suppress("UnstableApiUsage")
 class NodeImpl(
@@ -65,7 +66,7 @@ class NodeImpl(
 
     /**
      * 处理选举超时的代码
-     * 设置选举超市需要做的事情包括变更节点角色以及发送 RequestVote 消息给其他节点
+     * 设置选举超时需要做的事情包括变更节点角色以及发送 RequestVote 消息给其他节点
      *
      */
     private fun doProcessElectionTimeout() {
@@ -79,14 +80,11 @@ class NodeImpl(
         val newTerm = role.term + 1
         role.cancelTimeoutOrTask()
         logger.info { "start election" }
-        /**
-         * 将自己变成 candidate 角色
-         */
+        //将自己变成 candidate 角色
         changeRole(CandidateNodeRole(newTerm, scheduleElectionTimeout()))
-        /**
-         * 向其他节点发送 requestVote 消息
-         */
-        val rpc = RequestVoteRpc(newTerm, context.selfId)
+        val lastEntryMeta = context.log.lastEntryMeta
+        //向其他节点发送 requestVote 消息
+        val rpc = RequestVoteRpc(newTerm, context.selfId, lastEntryMeta.index, lastEntryMeta.term)
         context.connector.sendRequestVote(rpc, context.group.listEndpointExceptSelf())
     }
 
@@ -111,8 +109,8 @@ class NodeImpl(
             logger.debug { "term from rpc < current term" }
             return RequestVoteResult(role.term, false)
         }
-        // 是否进行投票
-        val vote = true
+        // 受到其他节点发来的信息时，比较元信息，判断是否进行投票
+        val vote = context.log.isNewerThan(rpc.lastLogIndex, rpc.lastLogTerm)
         // 如果对方的 term 比自己大，那么将自己切换为 Follower 角色
         if (rpc.term > role.term) {
             becomeFollower(rpc.term, if (vote) rpc.candidateId else null, null, true)
@@ -202,8 +200,8 @@ class NodeImpl(
         context.group.listReplicationTarget().forEach { doReplicationLog(it) }
     }
 
-    private fun doReplicationLog(member: GroupMember) {
-        val rpc = AppendEntriesRpc(role.term, context.selfId)
+    private fun doReplicationLog(member: GroupMember, maxEntries: Int = -1) {
+        val rpc = AppendEntriesRpc(role.term, context.selfId, member.getNextIndex(), maxEntries)
         context.connector.sendAppendEntries(rpc, member.endpoint)
     }
 
@@ -252,15 +250,22 @@ class NodeImpl(
     }
 
     private fun appendEntries(rpc: AppendEntriesRpc): Boolean {
+        val result = context.log.appendEntriesFromLeader(rpc.prevLogIndex, rpc.prevLogTerm, rpc.entries)
+        if (result) {
+            context.log.advanceCommitIndex(min(rpc.leaderCommit, rpc.lastEntryIndex), rpc.term)
+        }
         return true
     }
 
     @Subscribe
     fun onReceiveAppendEntriesResult(message: AppendEntriesResultMessage) {
-        context.taskExecutor.submit { doProcessEntriesResult(message) }
+        context.taskExecutor.submit { doProcessAppendEntriesResult(message) }
     }
 
-    private fun doProcessEntriesResult(message: AppendEntriesResultMessage) {
+    /**
+     * 收到 AppendEntries 响应
+     */
+    private fun doProcessAppendEntriesResult(message: AppendEntriesResultMessage) {
         val result = message.result
         if (result.term > role.term) {
             becomeFollower(result.term, null, null, true)
@@ -269,6 +274,24 @@ class NodeImpl(
         if (role !is LeaderNodeRole) {
             logger.warn { "receive append entries from node ${message.sourceNodeId} but current node is not leader" }
         }
+        val sourceNodeId = message.sourceNodeId
+        val member = context.group.getMember(sourceNodeId)
+        // 没有指定的成员
+        if (member == null) {
+            logger.info { "unexpected append entries from node $sourceNodeId, node maybe removed" }
+            return
+        }
+        val rpc = message.rpc
+        if (result.success) {
+            if (member.advanceReplicatingState(rpc.lastEntryIndex)) {
+                context.log.advanceCommitIndex(context.group.getMatchIndexOfMajor(), role.term)
+            }
+        } else {
+            if (!member.backOffNextIndex()) {
+                logger.warn { "cannot back off next index more,node $sourceNodeId" }
+            }
+        }
+
     }
 
     @Synchronized

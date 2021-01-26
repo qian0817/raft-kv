@@ -1,5 +1,15 @@
 package com.qianlei.log.entry
 
+/**
+ * 日志接口
+ * 日志主要有一下四种
+ * 1. 普通日志，负载为上层服务的操作
+ * 2. NO_OP日志，选举产生的新 leader 节点增加的第一条空日志
+ * 3.
+ * 4.
+ *
+ * @author qianlei
+ */
 interface Entry {
     companion object {
         const val KIND_NO_OP = 0
@@ -8,13 +18,25 @@ interface Entry {
         const val KIND_REMOVE_NODE = 4
     }
 
-    fun getKind(): Int
+    /**
+     * 日志类型
+     */
+    val kind: Int
 
-    fun getIndex(): Int
+    /**
+     * 日志索引
+     */
+    val index: Int
 
-    fun getTerm(): Int
+    val term: Int
 
-    fun getMeta(): EntryMeta
+    /**
+     * 日志元信息
+     */
+    val meta: EntryMeta
 
-    fun getCommandBytes(): ByteArray
+    /**
+     * 日志负载
+     */
+    val commandBytes: ByteArray
 }

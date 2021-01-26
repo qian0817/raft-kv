@@ -1,11 +1,14 @@
 package com.qianlei.node
 
+import mu.KotlinLogging
 import java.util.*
 
 /**
  * 集群成员
  */
 class NodeGroup {
+    private val logger = KotlinLogging.logger { }
+
     /**
      * 当前节点 ID
      */
@@ -43,6 +46,8 @@ class NodeGroup {
         return memberMap[id] ?: throw IllegalArgumentException("没有node $id")
     }
 
+    fun getMember(id: NodeId): GroupMember? = memberMap[id]
+
     /**
      * 日志复制的对象节点
      * 也就是除了自己以外的所有节点
@@ -60,4 +65,27 @@ class NodeGroup {
     }
 
     fun count() = memberMap.size
+
+    fun getMatchIndexOfMajor(): Int {
+
+        val matchIndices = memberMap.values
+            .filter { !it.idEquals(selfId) }
+            .map { NodeMatchIndex(it.endpoint.id, it.getMatchIndex()) }
+            .sorted()
+            .toList()
+        check(matchIndices.isNotEmpty()) { "standalone or no major node" }
+        logger.debug("match indices {}", matchIndices)
+        return matchIndices[matchIndices.size / 2].matchIndex
+    }
+
+    data class NodeMatchIndex(
+        val noeId: NodeId,
+        val matchIndex: Int
+    ) : Comparable<NodeMatchIndex> {
+
+        override fun compareTo(other: NodeMatchIndex): Int {
+            return matchIndex.compareTo(other.matchIndex)
+        }
+
+    }
 }

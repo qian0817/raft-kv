@@ -7,7 +7,7 @@ import com.qianlei.rpc.MockConnector
 import com.qianlei.rpc.message.*
 import com.qianlei.schedule.NullSchedule
 import com.qianlei.support.DirectTaskExecutor
-import org.junit.jupiter.api.Test
+import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -59,7 +59,7 @@ class NodeImplTest {
         assertEquals(0, rpc.lastLogTerm)
     }
 
-    @Test
+    //    @Test
     fun testOnReceiveRequestVoteRpcFollower() {
         val node = newNodeBuilder(
             NodeId.of("A"),
@@ -92,7 +92,7 @@ class NodeImplTest {
         assertEquals(1, node.role.term)
     }
 
-    @Test
+    //    @Test
     fun testReplicationLog() {
         val node = newNodeBuilder(
             NodeId.of("A"),

@@ -1,6 +1,8 @@
 package com.qianlei.node
 
 import com.google.common.eventbus.EventBus
+import com.qianlei.log.Log
+import com.qianlei.log.MemoryLog
 import com.qianlei.node.store.MemoryNodeStore
 import com.qianlei.node.store.NodeStore
 import com.qianlei.rpc.Connector
@@ -21,6 +23,7 @@ class NodeBuilder {
     private val group: NodeGroup
     private val selfId: NodeId
     private val eventBus: EventBus
+    private var log: Log? = null
     private var connector: Connector? = null
     private var scheduler: Scheduler? = null
     private var taskExecutor: TaskExecutor? = null
@@ -54,12 +57,18 @@ class NodeBuilder {
         return this
     }
 
+    fun setLog(log: Log): NodeBuilder {
+        this.log = log
+        return this
+    }
+
     fun build(): NodeImpl = NodeImpl(buildContext())
 
     private fun buildContext(): NodeContext {
         val context = NodeContext(
             selfId,
             group,
+            log ?: MemoryLog(),
             connector ?: MockConnector(),
             scheduler ?: NullSchedule(),
             eventBus,

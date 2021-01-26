@@ -5,7 +5,11 @@ import java.io.FileInputStream
 import java.io.InputStream
 import java.io.RandomAccessFile
 
-
+/**
+ * 将 RandomAccessFile 转换为 SeekableFile 的适配器
+ *
+ * @author
+ */
 class RandomAccessFileAdapter(private val file: File, mode: String = "rw") : SeekableFile {
     private var randomAccessFile = RandomAccessFile(file, mode)
 

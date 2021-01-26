@@ -10,4 +10,7 @@ data class AppendEntriesRpc(
     val prevLogTerm: Int = 0,
     val entries: List<Entry> = listOf(),
     val leaderCommit: Int = 0
-)
+) {
+    val lastEntryIndex: Int
+        get() = if (entries.isEmpty()) prevLogIndex else entries[entries.size - 1].index
+}
