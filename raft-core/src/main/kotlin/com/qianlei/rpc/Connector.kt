@@ -36,6 +36,8 @@ interface Connector {
      */
     fun replyAppendEntries(result: AppendEntriesResult, destinationEndpoint: NodeEndpoint)
 
+    fun resetChannels()
+
     /**
      * 关闭连接
      */

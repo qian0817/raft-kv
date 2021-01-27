@@ -2,6 +2,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("jvm") version "1.4.20"
+    kotlin("plugin.serialization") version "1.4.20"
 }
 
 group = "com.qianlei"
@@ -15,6 +16,7 @@ allprojects {
 
 subprojects {
     apply(plugin = "kotlin")
+    apply(plugin = "kotlinx-serialization")
 
     dependencies {
         implementation("org.jetbrains.kotlin:kotlin-reflect")

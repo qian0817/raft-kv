@@ -1,7 +1,9 @@
 package com.qianlei.rpc.message
 
 import com.qianlei.node.NodeId
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class RequestVoteRpc(
     val term: Int,
     val candidateId: NodeId,

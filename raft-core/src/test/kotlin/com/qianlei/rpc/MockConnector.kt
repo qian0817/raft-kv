@@ -60,6 +60,8 @@ class MockConnector : Connector {
 
     fun clearMessage() = messages.clear()
 
+    override fun resetChannels() {}
+
     class Message(val rpc: Any? = null, val destinationNodeId: NodeId? = null, val result: Any? = null) {
         override fun toString(): String {
             return "Message(rpc=$rpc, destinationNodeId=$destinationNodeId, result=$result)"
