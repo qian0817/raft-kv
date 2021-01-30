@@ -78,6 +78,14 @@ class NodeGroup {
         return matchIndices[matchIndices.size / 2].matchIndex
     }
 
+    fun resetReplicatingStates(nextIndex: Int) {
+        for (member in memberMap.values) {
+            if (!member.idEquals(selfId)) {
+                member.replicatingState = ReplicatingState(nextIndex)
+            }
+        }
+    }
+
     data class NodeMatchIndex(
         val noeId: NodeId,
         val matchIndex: Int

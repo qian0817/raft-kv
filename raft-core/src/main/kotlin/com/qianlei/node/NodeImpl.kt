@@ -110,7 +110,7 @@ class NodeImpl(
             return RequestVoteResult(role.term, false)
         }
         // 受到其他节点发来的信息时，比较元信息，判断是否进行投票
-        val vote = context.log.isNewerThan(rpc.lastLogIndex, rpc.lastLogTerm)
+        val vote = !context.log.isNewerThan(rpc.lastLogIndex, rpc.lastLogTerm)
         // 如果对方的 term 比自己大，那么将自己切换为 Follower 角色
         if (rpc.term > role.term) {
             becomeFollower(rpc.term, if (vote) rpc.candidateId else null, null, true)
@@ -178,6 +178,7 @@ class NodeImpl(
         // 超过一半的票数
         if (currentVotesCount > countOfMajor / 2) {
             logger.info { "become leader,term ${role.term}" }
+            context.group.resetReplicatingStates(context.log.nextIndex)
             changeRole(LeaderNodeRole(role.term, scheduleLogReplicationTask()))
         } else {
             changeRole(CandidateNodeRole(role.term, scheduleElectionTimeout(), currentVotesCount))
@@ -197,7 +198,9 @@ class NodeImpl(
 
     private fun doReplicationLog() {
         logger.debug { "replicate log" }
-        context.group.listReplicationTarget().forEach { doReplicationLog(it) }
+        context.group.listReplicationTarget().forEach {
+            doReplicationLog(it)
+        }
     }
 
     private fun doReplicationLog(member: GroupMember, maxEntries: Int = -1) {

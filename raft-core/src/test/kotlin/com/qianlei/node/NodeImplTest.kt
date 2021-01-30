@@ -59,7 +59,7 @@ class NodeImplTest {
         assertEquals(0, rpc.lastLogTerm)
     }
 
-    //    @Test
+    @Test
     fun testOnReceiveRequestVoteRpcFollower() {
         val node = newNodeBuilder(
             NodeId.of("A"),
@@ -92,7 +92,7 @@ class NodeImplTest {
         assertEquals(1, node.role.term)
     }
 
-    //    @Test
+    @Test
     fun testReplicationLog() {
         val node = newNodeBuilder(
             NodeId.of("A"),
@@ -105,6 +105,7 @@ class NodeImplTest {
         node.onReceiveRequestVoteResult(RequestVoteResult(1, true))
         node.replicateLog()
         val connector = node.context.connector as MockConnector
+        assertEquals(3,connector.getMessagesCount())
         val messages = connector.getMessages()
         val destinationNodeIds = messages.subList(1, 3).map { it.destinationNodeId }.toList()
         assertEquals(2, destinationNodeIds.size)
