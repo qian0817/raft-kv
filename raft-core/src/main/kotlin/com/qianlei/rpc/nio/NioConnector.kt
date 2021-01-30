@@ -40,7 +40,7 @@ class NioConnector(
                 override fun initChannel(ch: SocketChannel) {
                     ch.pipeline()
                         .addLast(Encoder())
-                        .addLast(Encoder())
+                        .addLast(Decoder())
                         .addLast(FromRemoteHandler(eventBus, inboundChannelGroup))
                 }
             })

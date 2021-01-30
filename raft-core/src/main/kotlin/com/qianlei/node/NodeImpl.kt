@@ -1,10 +1,8 @@
 package com.qianlei.node
 
 import com.google.common.eventbus.Subscribe
-import com.qianlei.node.role.AbstractNodeRole
-import com.qianlei.node.role.CandidateNodeRole
-import com.qianlei.node.role.FollowerNodeRole
-import com.qianlei.node.role.LeaderNodeRole
+import com.qianlei.node.role.*
+import com.qianlei.node.statemachine.StateMachine
 import com.qianlei.rpc.message.*
 import com.qianlei.schedule.ElectionTimeout
 import com.qianlei.schedule.LogReplicationTask
@@ -19,6 +17,7 @@ class NodeImpl(
     val context: NodeContext
 ) : Node {
 
+    private var stateMachine: StateMachine? = null
     private val logger = KotlinLogging.logger { }
 
     /**
@@ -46,11 +45,16 @@ class NodeImpl(
         started = true
     }
 
+    override fun getRoleNameAndLeaderId(): RoleNameAndLeaderId {
+        val leaderId = role.getLeaderId(context.selfId)
+        return RoleNameAndLeaderId(role.name, leaderId)
+    }
+
     /**
      * 处理角色变更
      */
     private fun changeRole(newRole: AbstractNodeRole) {
-        logger.debug { "node${context.selfId}, role state changed -> ${newRole.name}" }
+        logger.debug { "node${context.selfId}, role state changed ${role.name} -> ${newRole.name}" }
         context.store.term = newRole.term
         if (newRole is FollowerNodeRole) {
             context.store.votedFor = newRole.votedFor
@@ -79,7 +83,7 @@ class NodeImpl(
         }
         val newTerm = role.term + 1
         role.cancelTimeoutOrTask()
-        logger.info { "start election" }
+        logger.info { "start election, new term is $newTerm" }
         //将自己变成 candidate 角色
         changeRole(CandidateNodeRole(newTerm, scheduleElectionTimeout()))
         val lastEntryMeta = context.log.lastEntryMeta
@@ -145,7 +149,7 @@ class NodeImpl(
         // 取消超时定时器
         role.cancelTimeoutOrTask()
         if (leaderId != null && leaderId == role.getLeaderId(context.selfId)) {
-            logger.info { "current leader is $leaderId ,term $term" }
+            logger.trace { "current leader is $leaderId ,term $term" }
         }
         //重新创建选举超时定时器或者空定时器
         //ElectionTimeout.NONE 表示不设置选举超时
@@ -204,6 +208,7 @@ class NodeImpl(
     }
 
     private fun doReplicationLog(member: GroupMember, maxEntries: Int = -1) {
+        logger.trace { "replicate log from ${context.selfId} to ${member.endpoint.id}" }
         val rpc = AppendEntriesRpc(role.term, context.selfId, member.getNextIndex(), maxEntries)
         context.connector.sendAppendEntries(rpc, member.endpoint)
     }
@@ -295,6 +300,14 @@ class NodeImpl(
             }
         }
 
+    }
+
+    override fun registerStateMachine(stateMachine: StateMachine) {
+        this.stateMachine = stateMachine
+    }
+
+    override fun appendLog(commandBytes: ByteArray) {
+        TODO("Not yet implemented")
     }
 
     @Synchronized

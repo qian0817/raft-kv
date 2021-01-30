@@ -15,9 +15,13 @@ import mu.KotlinLogging
  */
 @Suppress("UnstableApiUsage")
 abstract class AbstractHandler(private val eventBus: EventBus) : ChannelDuplexHandler() {
+    companion object {
+        @Volatile
+        private var lastAppendEntriesRpc: AppendEntriesRpc? = null
+    }
+
     private val logger = KotlinLogging.logger { }
     protected var channel: Channel? = null
-    private var lastAppendEntriesRpc: AppendEntriesRpc? = null
     protected var remoteId: NodeId? = null
 
     override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
@@ -33,10 +37,11 @@ abstract class AbstractHandler(private val eventBus: EventBus) : ChannelDuplexHa
                     eventBus.post(eventBus.post(AppendEntriesResultMessage(msg, remoteId, lastReceived)))
                 }
             }
+            is AppendEntriesRpc -> eventBus.post(AppendEntriesRpcMessage(msg, remoteId, channel))
         }
     }
 
-    override fun write(ctx: ChannelHandlerContext?, msg: Any?, promise: ChannelPromise?) {
+    override fun write(ctx: ChannelHandlerContext, msg: Any, promise: ChannelPromise) {
         if (msg is AppendEntriesRpc) {
             lastAppendEntriesRpc = msg
         }

@@ -2,7 +2,9 @@ package com.qianlei.rpc.message
 
 import com.qianlei.log.entry.Entry
 import com.qianlei.node.NodeId
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class AppendEntriesRpc(
     val term: Int,
     val leaderId: NodeId,

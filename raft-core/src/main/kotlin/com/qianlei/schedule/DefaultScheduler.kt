@@ -1,5 +1,6 @@
 package com.qianlei.schedule
 
+import mu.KotlinLogging
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
@@ -18,6 +19,7 @@ class DefaultScheduler(
     /* 日志复制间隔 */
     private val logReplicationInterval: Int
 ) : Scheduler {
+    private val logger = KotlinLogging.logger { }
     private val scheduleExecutorService: ScheduledExecutorService
 
     init {
@@ -44,7 +46,12 @@ class DefaultScheduler(
     override fun scheduleElectionTimeout(task: Runnable): ElectionTimeout {
         // 随机超时时间
         val timeOut = Random.nextInt(maxElectionTimeout - minElectionTimeout) + minElectionTimeout
-        val scheduledFuture = scheduleExecutorService.schedule(task, timeOut.toLong(), TimeUnit.MILLISECONDS)
+        logger.trace { "set timeout $timeOut" }
+        val scheduledFuture = scheduleExecutorService.schedule(
+            task,
+            timeOut.toLong(),
+            TimeUnit.MILLISECONDS
+        )
         return ElectionTimeout(scheduledFuture)
     }
 
