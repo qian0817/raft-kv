@@ -17,4 +17,8 @@ class ServiceHandler(private val service: Service) : ChannelInboundHandlerAdapte
             is SetCommand -> service.set(CommandRequest(msg, ctx.channel()))
         }
     }
+
+    override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {
+        cause.printStackTrace()
+    }
 }

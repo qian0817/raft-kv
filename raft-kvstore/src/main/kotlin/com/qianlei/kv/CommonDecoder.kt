@@ -1,4 +1,4 @@
-package com.qianlei.kv.server
+package com.qianlei.kv
 
 import com.qianlei.kv.message.*
 import com.qianlei.kv.message.MessageConstant.Companion.MSG_TYPE_FAILURE
@@ -17,7 +17,7 @@ import kotlinx.serialization.protobuf.ProtoBuf
  *
  * @author qianlei
  */
-class ServiceDecoder : ByteToMessageDecoder() {
+class CommonDecoder : ByteToMessageDecoder() {
     @Suppress("EXPERIMENTAL_API_USAGE")
     override fun decode(ctx: ChannelHandlerContext?, byteBuf: ByteBuf, out: MutableList<Any>) {
         if (byteBuf.readableBytes() < 8) {

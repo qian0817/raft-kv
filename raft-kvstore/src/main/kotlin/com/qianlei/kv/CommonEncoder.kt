@@ -1,4 +1,4 @@
-package com.qianlei.kv.server
+package com.qianlei.kv
 
 import com.qianlei.kv.message.*
 import com.qianlei.kv.message.MessageConstant.Companion.MSG_TYPE_FAILURE
@@ -18,7 +18,7 @@ import kotlinx.serialization.protobuf.ProtoBuf
  * @author qianlei
  */
 @Suppress("EXPERIMENTAL_API_USAGE")
-class ServiceEncoder : MessageToByteEncoder<Any>() {
+class CommonEncoder : MessageToByteEncoder<Any>() {
     override fun encode(ctx: ChannelHandlerContext, msg: Any, out: ByteBuf) {
         when (msg) {
             is Success -> writeMessage(MSG_TYPE_SUCCESS, ProtoBuf.encodeToByteArray(Success), out)
@@ -35,4 +35,5 @@ class ServiceEncoder : MessageToByteEncoder<Any>() {
         out.writeInt(message.size)
         out.writeBytes(message)
     }
+
 }

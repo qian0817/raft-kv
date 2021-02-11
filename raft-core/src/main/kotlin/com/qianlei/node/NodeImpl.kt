@@ -1,8 +1,8 @@
 package com.qianlei.node
 
 import com.google.common.eventbus.Subscribe
+import com.qianlei.log.statemachine.StateMachine
 import com.qianlei.node.role.*
-import com.qianlei.node.statemachine.StateMachine
 import com.qianlei.rpc.message.*
 import com.qianlei.schedule.ElectionTimeout
 import com.qianlei.schedule.LogReplicationTask
@@ -16,8 +16,6 @@ class NodeImpl(
      */
     val context: NodeContext
 ) : Node {
-
-    private var stateMachine: StateMachine? = null
     private val logger = KotlinLogging.logger { }
 
     /**
@@ -184,6 +182,7 @@ class NodeImpl(
             logger.info { "become leader,term ${role.term}" }
             context.group.resetReplicatingStates(context.log.nextIndex)
             changeRole(LeaderNodeRole(role.term, scheduleLogReplicationTask()))
+            context.log.appendEntry(role.term)
         } else {
             changeRole(CandidateNodeRole(role.term, scheduleElectionTimeout(), currentVotesCount))
         }
@@ -262,7 +261,7 @@ class NodeImpl(
         if (result) {
             context.log.advanceCommitIndex(min(rpc.leaderCommit, rpc.lastEntryIndex), rpc.term)
         }
-        return true
+        return result
     }
 
     @Subscribe
@@ -302,12 +301,13 @@ class NodeImpl(
 
     }
 
-    override fun registerStateMachine(stateMachine: StateMachine) {
-        this.stateMachine = stateMachine
+    override fun appendLog(commandBytes: ByteArray) {
+        context.log.appendEntry(role.term, commandBytes)
+        doReplicationLog()
     }
 
-    override fun appendLog(commandBytes: ByteArray) {
-        TODO("Not yet implemented")
+    override fun registerStateMachine(stateMachine: StateMachine) {
+        context.log.stateMachine = stateMachine
     }
 
     @Synchronized
@@ -318,6 +318,7 @@ class NodeImpl(
         context.scheduler.stop()
         context.connector.close()
         context.taskExecutor.shutdown()
+        context.log.close()
         started = false
     }
 }

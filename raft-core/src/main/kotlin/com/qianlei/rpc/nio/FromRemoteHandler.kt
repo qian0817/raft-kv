@@ -25,4 +25,8 @@ class FromRemoteHandler(
             super.channelRead(ctx, msg)
         }
     }
+
+    override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {
+        logger.error(cause) {}
+    }
 }

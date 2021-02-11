@@ -14,9 +14,9 @@ import java.util.*
 @Suppress("EXPERIMENTAL_API_USAGE")
 @Serializable
 data class SetCommand(
-    val requestId: String = UUID.randomUUID().toString(),
     val key: String,
-    val value: ByteArray,
+    val value: String,
+    val requestId: String = UUID.randomUUID().toString(),
 ) {
     companion object {
         fun fromBytes(bytes: ByteArray): SetCommand {
@@ -26,25 +26,5 @@ data class SetCommand(
 
     fun toBytes(): ByteArray {
         return ProtoBuf.encodeToByteArray(this)
-    }
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-
-        other as SetCommand
-
-        if (requestId != other.requestId) return false
-        if (key != other.key) return false
-        if (!value.contentEquals(other.value)) return false
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        var result = requestId.hashCode()
-        result = 31 * result + key.hashCode()
-        result = 31 * result + value.contentHashCode()
-        return result
     }
 }

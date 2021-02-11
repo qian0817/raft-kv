@@ -30,12 +30,6 @@ class ServerLauncher {
         try {
             val cmdLine = parser.parse(options, args)
             startAsGroupMember(cmdLine)
-//            when (val mode = cmdLine.getOptionValue('m', MODE_STANDALONE)) {
-//                MODE_STANDBY -> startAsStandaloneOrStandby(cmdLine, true)
-//                MODE_STANDALONE -> startAsStandaloneOrStandby(cmdLine, false)
-//                MODE_GROUP_MEMBER -> startAsGroupMember(cmdLine)
-//                else -> throw IllegalArgumentException("illegal mode [$mode]")
-//            }
         } catch (e: java.lang.Exception) {
             when (e) {
                 is ParseException, is IllegalArgumentException -> logger.error(e) {}
@@ -59,7 +53,7 @@ class ServerLauncher {
                 NodeGroup(nodeEndpoints, nodeId),
                 MemoryLog(),
                 NioConnector(NioEventLoopGroup(), true, nodeEndpoint.id, eventBus, nodeEndpoint.address.port),
-                DefaultScheduler(3000, 6000, 1000, 1000),
+                DefaultScheduler(20000, 40000, 5000, 5000),
                 eventBus,
                 SingleThreadTaskExecutor(),
                 MemoryNodeStore()

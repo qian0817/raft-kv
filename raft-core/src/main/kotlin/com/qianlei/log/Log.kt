@@ -4,6 +4,7 @@ import com.qianlei.log.entry.Entry
 import com.qianlei.log.entry.EntryMeta
 import com.qianlei.log.entry.GeneralEntry
 import com.qianlei.log.entry.NoOpEntry
+import com.qianlei.log.statemachine.StateMachine
 import com.qianlei.node.NodeId
 import com.qianlei.rpc.message.AppendEntriesRpc
 
@@ -40,6 +41,8 @@ interface Log {
      * 获取当前的 commitIndex
      */
     val commitIndex: Int
+
+    var stateMachine: StateMachine
 
     /**
      * 判断对象的 lastLogIndex 以及 lastLogTerm 是否比自己新

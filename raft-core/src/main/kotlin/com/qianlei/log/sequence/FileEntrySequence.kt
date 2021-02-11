@@ -39,6 +39,7 @@ class FileEntrySequence(
 ) : AbstractEntrySequence(logIndexOffset) {
     private val pendingEntries = LinkedList<Entry>()
     private val entryFactory = EntryFactory()
+    override var commitIndex: Int = 0
 
     init {
         initialize()
@@ -159,16 +160,7 @@ class FileEntrySequence(
         if (index == commitIndex) {
             return
         }
-        // 如果 commitIndex 在文件内，只更新 commitIndex
-        if (!entryIndexFile.isEmpty() && index <= entryIndexFile.maxEntryIndex) {
-            commitIndex = index
-            return
-        }
-        require(
-            !pendingEntries.isEmpty()
-                    && pendingEntries.first.index <= index
-                    && pendingEntries.last.index >= index
-        ) {
+        require(!pendingEntries.isEmpty() && pendingEntries.last.index >= index) {
             "no entry to commit or commit index exceed"
         }
 
@@ -179,8 +171,6 @@ class FileEntrySequence(
             commitIndex = i
         }
     }
-
-    override var commitIndex: Int = 0
 
     override fun close() {
         entriesFile.close()

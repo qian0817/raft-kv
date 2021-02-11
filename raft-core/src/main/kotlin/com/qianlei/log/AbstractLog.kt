@@ -6,6 +6,7 @@ import com.qianlei.log.entry.EntryMeta
 import com.qianlei.log.entry.GeneralEntry
 import com.qianlei.log.entry.NoOpEntry
 import com.qianlei.log.sequence.EntrySequence
+import com.qianlei.log.statemachine.StateMachine
 import com.qianlei.node.NodeId
 import com.qianlei.rpc.message.AppendEntriesRpc
 import mu.KotlinLogging
@@ -21,8 +22,10 @@ abstract class AbstractLog : Log {
 
     override val nextIndex
         get() = entrySequence.nextLogIndex
+    override val commitIndex: Int
+        get() = entrySequence.commitIndex
 
-    override val commitIndex: Int = 0
+    override lateinit var stateMachine: StateMachine
 
     /**
      * 获取最后一条日志的元信息
@@ -46,15 +49,11 @@ abstract class AbstractLog : Log {
             val maxIndex = if (maxEntries == ALL_ENTRIES) nextLogIndex else min(nextLogIndex, nextIndex + maxEntries)
             entrySequence.subList(nextIndex, maxIndex)
         } else {
-            listOf()
+            emptyList()
         }
-        return AppendEntriesRpc(
-            term,
-            selfId,
-            entry?.index ?: 0,
-            entry?.term ?: 0,
-            entries, commitIndex
-        )
+        val prevLogIndex = entry?.index ?: 0
+        val prevLogTerm = entry?.term ?: 0
+        return AppendEntriesRpc(term, selfId, prevLogIndex, prevLogTerm, entries, commitIndex)
     }
 
     override fun isNewerThan(lastLogIndex: Int, lastLogTerm: Int): Boolean {
@@ -168,6 +167,21 @@ abstract class AbstractLog : Log {
         }
         logger.debug { "advance commit index from $commitIndex to $newCommitIndex" }
         entrySequence.commit(newCommitIndex)
+        advanceApplyIndex()
+    }
+
+    private fun advanceApplyIndex() {
+        // start up and snapshot exists
+        val lastApplied = stateMachine.getLastApplied()
+        for (entry in entrySequence.subList(lastApplied + 1, commitIndex + 1)) {
+            applyEntry(entry)
+        }
+    }
+
+    private fun applyEntry(entry: Entry) {
+        if (entry.kind == Entry.KIND_GENERAL) {
+            stateMachine.applyLog(entry.index, entry.commandBytes)
+        }
     }
 
     /**
@@ -225,5 +239,6 @@ abstract class AbstractLog : Log {
 
     override fun close() {
         entrySequence.close()
+        stateMachine.shutdown()
     }
 }

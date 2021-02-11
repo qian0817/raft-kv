@@ -1,6 +1,7 @@
 package com.qianlei.log.sequence
 
 import com.qianlei.log.entry.Entry
+import mu.KotlinLogging
 
 /**
  * 基于内存的日志序列实现，使用一个Entry列表作为存储对象
@@ -8,7 +9,12 @@ import com.qianlei.log.entry.Entry
  */
 class MemoryEntrySequence(logIndexOffset: Int = 1) : AbstractEntrySequence(logIndexOffset) {
     private val entries = arrayListOf<Entry>()
-    override fun doGetEntry(index: Int) = entries[index - logIndexOffset]
+    private val logger = KotlinLogging.logger { }
+    override fun doGetEntry(index: Int): Entry {
+        logger.debug { "index: $index" }
+        logger.debug { "logIndexOffset: $logIndexOffset" }
+        return entries[index - logIndexOffset]
+    }
 
     override fun doSubList(fromIndex: Int, toIndex: Int) =
         entries.subList(fromIndex - logIndexOffset, toIndex - logIndexOffset)

@@ -54,7 +54,7 @@ class NioConnector(
             try {
                 getChannel(it).writeRequestVoteRpc(rpc)
             } catch (e: Exception) {
-                logger.warn(e) { "failed to send RequestVoteRpc" }
+                logger.warn { "failed to send RequestVoteRpc to ${it.id}" }
             }
         }
     }
@@ -67,7 +67,7 @@ class NioConnector(
         try {
             getChannel(destinationEndpoint).writeRequestVoteResult(result)
         } catch (e: Exception) {
-            logger.warn(e) { "failed to send RequestVoteRpc" }
+            logger.warn { "failed to send RequestVoteRpc to ${destinationEndpoint.id}" }
         }
     }
 
@@ -75,7 +75,7 @@ class NioConnector(
         try {
             getChannel(destinationEndpoint).writeAppendEntriesRpc(rpc)
         } catch (e: Exception) {
-            logger.warn(e) { "failed to send RequestVoteRpc" }
+            logger.warn { "failed to send RequestVoteRpc to ${destinationEndpoint.id}" }
         }
     }
 
@@ -83,7 +83,7 @@ class NioConnector(
         try {
             getChannel(destinationEndpoint).writeAppendEntriesResult(result)
         } catch (e: Exception) {
-            logger.warn(e) { "failed to send RequestVoteRpc" }
+            logger.warn { "failed to send RequestVoteRpc to ${destinationEndpoint.id}" }
         }
     }
 

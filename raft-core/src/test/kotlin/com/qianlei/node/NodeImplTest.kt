@@ -123,14 +123,14 @@ class NodeImplTest {
             NodeEndpoint("C", "localhost", 2335)
         )
         node.start()
-        val rpc = AppendEntriesRpc(1, NodeId.of("B"))
+        val rpc = AppendEntriesRpc(0, NodeId.of("B"))
         node.onReceiveAppendEntriesRpc(AppendEntriesRpcMessage(rpc, NodeId.of("B")))
         val connector = node.context.connector as MockConnector
         val result = connector.getResult() as AppendEntriesResult
-        assertEquals(1, result.term)
+        assertEquals(0, result.term)
         assertTrue(result.success)
         val role = node.role as FollowerNodeRole
-        assertEquals(1, role.term)
+        assertEquals(0, role.term)
         assertEquals(NodeId.of("B"), role.leaderId)
     }
 

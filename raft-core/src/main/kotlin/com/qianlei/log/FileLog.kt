@@ -19,4 +19,5 @@ class FileLog(baseDir: File) : AbstractLog() {
         }
         this.entrySequence = entrySequence
     }
+
 }

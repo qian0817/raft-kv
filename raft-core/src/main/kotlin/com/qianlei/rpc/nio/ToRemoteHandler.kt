@@ -30,4 +30,8 @@ class ToRemoteHandler(
         logger.debug("receive {} from {}", msg, remoteId)
         super.channelRead(ctx, msg)
     }
+
+    override fun exceptionCaught(ctx: ChannelHandlerContext?, cause: Throwable?) {
+        logger.error(cause) {}
+    }
 }

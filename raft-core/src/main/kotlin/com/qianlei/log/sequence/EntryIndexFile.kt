@@ -78,7 +78,7 @@ class EntryIndexFile(
 
     operator fun get(entryIndex: Int): EntryIndexItem {
         checkEmpty()
-        require(!(entryIndex < minEntryIndex || entryIndex > maxEntryIndex)) {
+        require(entryIndex in minEntryIndex..maxEntryIndex) {
             "index < min or index > max, " +
                     "enterIndex is $entryIndex ," +
                     "minEntryIndex is $minEntryIndex, " +
@@ -151,7 +151,7 @@ class EntryIndexFile(
         seekableFile.writeInt(newMaxEntryIndex)
         seekableFile.truncate(getOffsetOfEntryIndexItem(newMaxEntryIndex + 1))
         // 清除缓存中的元信息
-        for (i in newMaxEntryIndex..maxEntryIndex) {
+        for (i in newMaxEntryIndex + 1..maxEntryIndex) {
             entryIndexMap.remove(i)
         }
         maxEntryIndex = newMaxEntryIndex

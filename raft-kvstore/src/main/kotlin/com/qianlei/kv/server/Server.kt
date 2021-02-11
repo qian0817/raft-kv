@@ -1,5 +1,7 @@
 package com.qianlei.kv.server
 
+import com.qianlei.kv.CommonDecoder
+import com.qianlei.kv.CommonEncoder
 import com.qianlei.node.Node
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.ChannelInitializer
@@ -25,8 +27,8 @@ class Server(private val node: Node, private val port: Int) {
             .channel(NioServerSocketChannel::class.java)
             .childHandler(object : ChannelInitializer<SocketChannel>() {
                 override fun initChannel(ch: SocketChannel) {
-                    ch.pipeline().addLast(ServiceDecoder())
-                        .addLast(ServiceEncoder())
+                    ch.pipeline().addLast(CommonDecoder())
+                        .addLast(CommonEncoder())
                         .addLast(ServiceHandler(service))
                 }
             })
