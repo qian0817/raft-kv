@@ -1,7 +1,9 @@
 package com.qianlei.node
 
 import com.qianlei.rpc.Address
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class NodeEndpoint(
     val id: NodeId,
     val address: Address

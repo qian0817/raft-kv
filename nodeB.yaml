@@ -1,0 +1,23 @@
+port: 3334
+groupEndpoint:
+  - id:
+      value: "A"
+    address:
+      host: "localhost"
+      port: 2333
+  - id:
+      value: "B"
+    address:
+      host: "localhost"
+      port: 2334
+  - id:
+      value: "C"
+    address:
+      host: "localhost"
+      port: 2335
+selfId:
+  value: "B"
+minElectionTimeout: 2000
+maxElectionTimeout: 4000
+logReplicationDelay: 1000
+logReplicationInterval: 200
