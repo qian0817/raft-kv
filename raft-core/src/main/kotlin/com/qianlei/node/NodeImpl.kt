@@ -261,7 +261,7 @@ class NodeImpl(
         if (result) {
             context.log.advanceCommitIndex(min(rpc.leaderCommit, rpc.lastEntryIndex), rpc.term)
         }
-        return result
+        return true
     }
 
     @Subscribe

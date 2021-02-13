@@ -84,6 +84,7 @@ abstract class AbstractLog : Log {
      *
      */
     override fun appendEntriesFromLeader(prevLogIndex: Int, prevLogTerm: Int, leaderEntries: List<Entry>): Boolean {
+        logger.debug { "prevLogIndex: $prevLogIndex prevLogTerm:$prevLogTerm" }
         if (!checkIfPreviousLogMatches(prevLogIndex, prevLogTerm)) {
             return false
         }

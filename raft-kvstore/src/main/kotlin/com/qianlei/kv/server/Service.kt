@@ -1,6 +1,8 @@
 package com.qianlei.kv.server
 
-import com.qianlei.kv.message.*
+import com.qianlei.kv.message.Redirect
+import com.qianlei.kv.message.SetCommand
+import com.qianlei.kv.message.Success
 import com.qianlei.log.statemachine.StateMachine
 import com.qianlei.node.Node
 import com.qianlei.node.role.RoleName
@@ -14,24 +16,23 @@ import java.util.concurrent.ConcurrentHashMap
  */
 class Service(private val node: Node) {
     private val logger = KotlinLogging.logger { }
-    private val pendingCommands = ConcurrentHashMap<String, CommandRequest<*>>()
+    private val pendingCommands = ConcurrentHashMap<String, SetCommand>()
     private val map = ConcurrentHashMap<String, String>()
 
     init {
         node.registerStateMachine(StateMachineImpl())
     }
 
-    fun set(commandRequest: CommandRequest<SetCommand>) {
+    fun set(key: String, value: String): Any {
         val redirect = checkLeadership()
         if (redirect != null) {
-            commandRequest.reply(redirect)
-            return
+            return redirect
         }
-        val command = commandRequest.command
+        val command = SetCommand(key, value)
         logger.debug { "set ${command.key}" }
-        pendingCommands[command.requestId] = commandRequest
-        commandRequest.addCloseListener { pendingCommands.remove(command.requestId) }
+        pendingCommands[command.requestId] = command
         node.appendLog(command.toBytes())
+        return Success
     }
 
     private fun checkLeadership(): Redirect? {
@@ -42,11 +43,9 @@ class Service(private val node: Node) {
         return null
     }
 
-    fun get(commandRequest: CommandRequest<GetCommand>) {
-        val key = commandRequest.command.key
+    fun get(key: String?): String? {
         logger.debug { "get $key" }
-        val value = map[key]
-        commandRequest.reply(GetCommandResponse(value ?: "null"))
+        return map[key]
     }
 
 
@@ -80,7 +79,6 @@ class Service(private val node: Node) {
             val command = SetCommand.fromBytes(commandBytes)
             println("set ${command.key} ${command.value}")
             map[command.key] = command.value
-            pendingCommands.remove(command.requestId)?.reply(Success)
         }
 
         override fun shutdown() {

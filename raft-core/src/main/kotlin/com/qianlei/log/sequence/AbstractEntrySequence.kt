@@ -1,6 +1,7 @@
 package com.qianlei.log.sequence
 
 import com.qianlei.log.entry.Entry
+import mu.KotlinLogging
 import java.util.*
 import kotlin.math.max
 
@@ -16,6 +17,7 @@ import kotlin.math.max
 abstract class AbstractEntrySequence(
     protected var logIndexOffset: Int
 ) : EntrySequence {
+    private val logger = KotlinLogging.logger { }
     override var nextLogIndex = logIndexOffset
 
     override fun isEmpty() = logIndexOffset == nextLogIndex
@@ -60,6 +62,7 @@ abstract class AbstractEntrySequence(
     override fun append(entries: List<Entry>) = entries.forEach { append(it) }
 
     override fun append(entry: Entry) {
+        logger.debug { "append entry:$entry" }
         if (entry.index != nextLogIndex) {
             throw IllegalArgumentException("entry index must be $nextLogIndex")
         }
