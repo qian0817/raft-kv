@@ -17,6 +17,7 @@ groupEndpoint:
       port: 2335
 selfId:
   value: "B"
+dataPath: "data/2"
 minElectionTimeout: 2000
 maxElectionTimeout: 4000
 logReplicationDelay: 1000

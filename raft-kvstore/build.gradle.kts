@@ -18,4 +18,5 @@ dependencies {
     implementation("io.ktor", "ktor-server-netty", "1.5.1")
     implementation("io.ktor", "ktor-serialization", "1.5.1")
     testImplementation("io.ktor", "ktor-server-tests", "1.5.1")
+    implementation("org.rocksdb", "rocksdbjni", "6.15.2")
 }

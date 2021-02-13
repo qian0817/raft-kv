@@ -61,11 +61,11 @@ class ServerLauncher {
         serverConfig: ServerConfig,
         node: Node
     ) {
-        val service = Service(node)
+        val service = Service(node, serverConfig)
         embeddedServer(Netty, serverConfig.port) {
             routing {
                 get("/data/{key}") {
-                    val key = call.parameters["key"]
+                    val key = call.parameters["key"]!!
                     val value = service.get(key)
                     if (value == null) {
                         call.respondText(

@@ -12,6 +12,7 @@ data class ServerConfig(
      */
     val groupEndpoint: List<NodeEndpoint>,
     val selfId: NodeId,
+    val dataPath: String = "data",
     /* 最小选举超时时间 */
     val minElectionTimeout: Int = 2000,
     /* 最大选举超时时间 */
@@ -19,5 +20,5 @@ data class ServerConfig(
     /* 初次日志复制延迟时间 */
     val logReplicationDelay: Int = 1000,
     /* 日志复制间隔 */
-    val logReplicationInterval: Int = 200
+    val logReplicationInterval: Int = 200,
 )
