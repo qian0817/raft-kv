@@ -13,7 +13,7 @@ data class GroupMember(
      */
     var replicatingState: ReplicatingState? = null,
 ) {
-    private var removing = false
+    var removing = false
 
     fun idEquals(id: NodeId): Boolean {
         return endpoint.id == id
@@ -25,14 +25,6 @@ data class GroupMember(
 
     private fun ensureReplicatingState(): ReplicatingState {
         return replicatingState ?: throw IllegalStateException("replication state not set")
-    }
-
-    fun isRemoving(): Boolean {
-        return removing
-    }
-
-    fun setRemoving() {
-        removing = true
     }
 
     fun getNextIndex(): Int {

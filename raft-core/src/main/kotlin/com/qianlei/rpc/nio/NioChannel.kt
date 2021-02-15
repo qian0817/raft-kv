@@ -1,10 +1,7 @@
 package com.qianlei.rpc.nio
 
 import com.qianlei.rpc.Channel
-import com.qianlei.rpc.message.AppendEntriesResult
-import com.qianlei.rpc.message.AppendEntriesRpc
-import com.qianlei.rpc.message.RequestVoteResult
-import com.qianlei.rpc.message.RequestVoteRpc
+import com.qianlei.rpc.message.*
 
 /**
  *
@@ -26,6 +23,14 @@ class NioChannel(val nettyChannel: io.netty.channel.Channel) : Channel {
 
     override fun writeAppendEntriesResult(result: AppendEntriesResult) {
         nettyChannel.writeAndFlush(result)
+    }
+
+    override fun writeInstallSnapshotResult(result: InstallSnapshotResult) {
+        nettyChannel.writeAndFlush(result)
+    }
+
+    override fun writeInstallSnapshotRpc(rpc: InstallSnapshotRpc) {
+        nettyChannel.writeAndFlush(rpc)
     }
 
     override fun close() {

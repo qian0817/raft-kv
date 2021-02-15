@@ -1,10 +1,7 @@
 package com.qianlei.rpc
 
 import com.qianlei.node.NodeEndpoint
-import com.qianlei.rpc.message.AppendEntriesResult
-import com.qianlei.rpc.message.AppendEntriesRpc
-import com.qianlei.rpc.message.RequestVoteResult
-import com.qianlei.rpc.message.RequestVoteRpc
+import com.qianlei.rpc.message.*
 
 /**
  * RPC 调用接口,方便切换实现和测试
@@ -35,6 +32,10 @@ interface Connector {
      * 回复[result]结果给单个节点
      */
     fun replyAppendEntries(result: AppendEntriesResult, destinationEndpoint: NodeEndpoint)
+
+    fun replyInstallSnapshot(result: InstallSnapshotResult, destinationEndpoint: NodeEndpoint)
+
+    fun sendInstallSnapshot(rpc: InstallSnapshotRpc, destinationEndpoint: NodeEndpoint)
 
     fun resetChannels()
 

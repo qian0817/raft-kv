@@ -5,8 +5,10 @@ import com.qianlei.log.entry.EntryMeta
 import com.qianlei.log.entry.GeneralEntry
 import com.qianlei.log.entry.NoOpEntry
 import com.qianlei.log.statemachine.StateMachine
+import com.qianlei.node.NodeEndpoint
 import com.qianlei.node.NodeId
 import com.qianlei.rpc.message.AppendEntriesRpc
+import com.qianlei.rpc.message.InstallSnapshotRpc
 
 /**
  *
@@ -70,7 +72,11 @@ interface Log {
      */
     fun advanceCommitIndex(newCommitIndex: Int, currentTerm: Int)
 
-//    fun setStateMachine(stateMachine:StateMachine)
+    fun generateSnapshot(lastIncludedIndex: Int, groupConfig: List<NodeEndpoint>)
+
+    fun installSnapshot(rpc: InstallSnapshotRpc): InstallSnapshotState
+
+    fun createInstallSnapshotRpc(term: Int, selfId: NodeId, offset: Int, length: Int): InstallSnapshotRpc
 
     fun close()
 }

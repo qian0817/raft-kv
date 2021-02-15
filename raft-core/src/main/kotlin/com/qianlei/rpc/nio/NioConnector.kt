@@ -5,10 +5,7 @@ import com.qianlei.node.NodeEndpoint
 import com.qianlei.node.NodeId
 import com.qianlei.rpc.Channel
 import com.qianlei.rpc.Connector
-import com.qianlei.rpc.message.AppendEntriesResult
-import com.qianlei.rpc.message.AppendEntriesRpc
-import com.qianlei.rpc.message.RequestVoteResult
-import com.qianlei.rpc.message.RequestVoteRpc
+import com.qianlei.rpc.message.*
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.ChannelInitializer
 import io.netty.channel.nio.NioEventLoopGroup
@@ -85,6 +82,14 @@ class NioConnector(
         } catch (e: Exception) {
             logger.warn { "failed to send RequestVoteRpc to ${destinationEndpoint.id}" }
         }
+    }
+
+    override fun replyInstallSnapshot(result: InstallSnapshotResult, destinationEndpoint: NodeEndpoint) {
+        getChannel(destinationEndpoint).writeInstallSnapshotResult(result)
+    }
+
+    override fun sendInstallSnapshot(rpc: InstallSnapshotRpc, destinationEndpoint: NodeEndpoint) {
+        getChannel(destinationEndpoint).writeInstallSnapshotRpc(rpc)
     }
 
     override fun resetChannels() {

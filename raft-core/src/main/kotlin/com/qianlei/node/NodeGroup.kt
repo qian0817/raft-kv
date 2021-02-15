@@ -17,7 +17,7 @@ class NodeGroup {
     /**
      * 成员表
      */
-    private val memberMap: Map<NodeId, GroupMember>
+    private var memberMap: Map<NodeId, GroupMember>
 
     /**
      * 单节点构造函数
@@ -56,12 +56,12 @@ class NodeGroup {
         return memberMap.values.filter { !it.idEquals(selfId) }.toList()
     }
 
-    fun listEndpointExceptSelf(): Set<NodeEndpoint> {
+    fun listEndpointExceptSelf(): List<NodeEndpoint> {
         return memberMap.values
             .asSequence()
             .map { it.endpoint }
             .filter { it.id != selfId }
-            .toSet()
+            .toList()
     }
 
     fun count() = memberMap.size
@@ -86,6 +86,11 @@ class NodeGroup {
         }
     }
 
+    //    fun updateNodes(endpoints: List<NodeEndpoint>) {
+//        memberMap = buildMemberMap(endpoints)
+//        logger.info { "group change changed -> ${memberMap.keys}" }
+//    }
+//
     data class NodeMatchIndex(
         val noeId: NodeId,
         val matchIndex: Int

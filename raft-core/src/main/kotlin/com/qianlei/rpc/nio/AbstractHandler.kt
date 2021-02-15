@@ -18,6 +18,9 @@ abstract class AbstractHandler(private val eventBus: EventBus) : ChannelDuplexHa
     companion object {
         @Volatile
         private var lastAppendEntriesRpc: AppendEntriesRpc? = null
+
+        @Volatile
+        private var lastInstallSnapshotRpc: InstallSnapshotRpc? = null
     }
 
     private val logger = KotlinLogging.logger { }
@@ -37,13 +40,27 @@ abstract class AbstractHandler(private val eventBus: EventBus) : ChannelDuplexHa
                     eventBus.post(eventBus.post(AppendEntriesResultMessage(msg, remoteId, lastReceived)))
                 }
             }
-            is AppendEntriesRpc -> eventBus.post(AppendEntriesRpcMessage(msg, remoteId, channel))
+            is AppendEntriesRpc -> {
+                eventBus.post(AppendEntriesRpcMessage(msg, remoteId, channel))
+            }
+            is InstallSnapshotRpc -> eventBus.post(InstallSnapshotRpcMessage(msg, remoteId, channel))
+            is InstallSnapshotResult -> {
+                val rpc = lastInstallSnapshotRpc
+                if (rpc == null) {
+                    logger.warn { "lastInstallSnapshotRpc is null" }
+                    return
+                }
+                eventBus.post(InstallSnapshotResultMessage(msg, remoteId, rpc))
+                lastInstallSnapshotRpc = null
+            }
         }
     }
 
     override fun write(ctx: ChannelHandlerContext, msg: Any, promise: ChannelPromise) {
         if (msg is AppendEntriesRpc) {
             lastAppendEntriesRpc = msg
+        } else if (msg is InstallSnapshotRpc) {
+            lastInstallSnapshotRpc = msg
         }
         super.write(ctx, msg, promise)
     }

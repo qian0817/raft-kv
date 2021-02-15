@@ -24,7 +24,7 @@ abstract class AbstractLogDir(protected val dir: File) : LogDir {
         return dir.exists()
     }
 
-    fun getSnapshotFile(): File {
+    override fun getSnapshotFile(): File {
         return File(dir, RootDir.FILE_NAME_SNAPSHOT)
     }
 

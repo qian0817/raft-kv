@@ -27,6 +27,8 @@ interface LogDir {
      */
     fun getEntryOffsetIndexFile(): File
 
+    fun getSnapshotFile(): File
+
     /**
      * 获取目录
      */

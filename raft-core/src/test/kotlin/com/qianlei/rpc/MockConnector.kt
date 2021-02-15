@@ -2,10 +2,7 @@ package com.qianlei.rpc
 
 import com.qianlei.node.NodeEndpoint
 import com.qianlei.node.NodeId
-import com.qianlei.rpc.message.AppendEntriesResult
-import com.qianlei.rpc.message.AppendEntriesRpc
-import com.qianlei.rpc.message.RequestVoteResult
-import com.qianlei.rpc.message.RequestVoteRpc
+import com.qianlei.rpc.message.*
 import java.util.*
 import kotlin.collections.ArrayList
 
@@ -35,6 +32,16 @@ class MockConnector : Connector {
 
     override fun replyAppendEntries(result: AppendEntriesResult, destinationEndpoint: NodeEndpoint) {
         val message = Message(result = result, destinationNodeId = destinationEndpoint.id)
+        messages.add(message)
+    }
+
+    override fun replyInstallSnapshot(result: InstallSnapshotResult, destinationEndpoint: NodeEndpoint) {
+        val message = Message(result = result, destinationNodeId = destinationEndpoint.id)
+        messages.add(message)
+    }
+
+    override fun sendInstallSnapshot(rpc: InstallSnapshotRpc, destinationEndpoint: NodeEndpoint) {
+        val message = Message(rpc = rpc, destinationNodeId = destinationEndpoint.id)
         messages.add(message)
     }
 

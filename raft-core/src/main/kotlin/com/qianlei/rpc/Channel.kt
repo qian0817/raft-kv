@@ -1,9 +1,6 @@
 package com.qianlei.rpc
 
-import com.qianlei.rpc.message.AppendEntriesResult
-import com.qianlei.rpc.message.AppendEntriesRpc
-import com.qianlei.rpc.message.RequestVoteResult
-import com.qianlei.rpc.message.RequestVoteRpc
+import com.qianlei.rpc.message.*
 import java.io.Closeable
 
 
@@ -40,4 +37,8 @@ interface Channel : Closeable {
      * @param result result
      */
     fun writeAppendEntriesResult(result: AppendEntriesResult)
+
+    fun writeInstallSnapshotResult(result: InstallSnapshotResult)
+
+    fun writeInstallSnapshotRpc(rpc: InstallSnapshotRpc)
 }

@@ -1,6 +1,8 @@
 package com.qianlei.node
 
 import com.google.common.eventbus.Subscribe
+import com.qianlei.log.event.SnapshotGenerateEvent
+import com.qianlei.log.snapshot.EntryInSnapshotException
 import com.qianlei.log.statemachine.StateMachine
 import com.qianlei.node.role.*
 import com.qianlei.rpc.message.*
@@ -60,6 +62,23 @@ class NodeImpl(
         role = newRole
     }
 
+    private fun becomeFollower(
+        term: Int,
+        votedFor: NodeId?,
+        leaderId: NodeId?,
+        scheduledElectionTimeout: Boolean
+    ) {
+        // 取消超时定时器
+        role.cancelTimeoutOrTask()
+        if (leaderId != null && leaderId == role.getLeaderId(context.selfId)) {
+            logger.trace { "current leader is $leaderId ,term $term" }
+        }
+        //重新创建选举超时定时器或者空定时器
+        //ElectionTimeout.NONE 表示不设置选举超时
+        val electionTimeout = if (scheduledElectionTimeout) scheduleElectionTimeout() else ElectionTimeout.NONE
+        changeRole(FollowerNodeRole(term, votedFor, leaderId, electionTimeout))
+    }
+
     private fun scheduleElectionTimeout() = context.scheduler.scheduleElectionTimeout(::electionTimeout)
 
     internal fun electionTimeout() {
@@ -81,6 +100,7 @@ class NodeImpl(
         }
         val newTerm = role.term + 1
         role.cancelTimeoutOrTask()
+
         logger.info { "start election, new term is $newTerm" }
         //将自己变成 candidate 角色
         changeRole(CandidateNodeRole(newTerm, scheduleElectionTimeout()))
@@ -138,23 +158,6 @@ class NodeImpl(
         }
     }
 
-    private fun becomeFollower(
-        term: Int,
-        votedFor: NodeId?,
-        leaderId: NodeId?,
-        scheduledElectionTimeout: Boolean
-    ) {
-        // 取消超时定时器
-        role.cancelTimeoutOrTask()
-        if (leaderId != null && leaderId == role.getLeaderId(context.selfId)) {
-            logger.trace { "current leader is $leaderId ,term $term" }
-        }
-        //重新创建选举超时定时器或者空定时器
-        //ElectionTimeout.NONE 表示不设置选举超时
-        val electionTimeout = if (scheduledElectionTimeout) scheduleElectionTimeout() else ElectionTimeout.NONE
-        changeRole(FollowerNodeRole(term, votedFor, leaderId, electionTimeout))
-    }
-
     @Subscribe
     fun onReceiveRequestVoteResult(result: RequestVoteResult) {
         context.taskExecutor.submit { doProcessRequestVoteResult(result) }
@@ -170,7 +173,7 @@ class NodeImpl(
             logger.debug { "receive request vote result and current role is not candidate, ignore" }
             return
         }
-        if (result.term < role.term || !result.voteGranted) {
+        if (!result.voteGranted) {
             return
         }
         val currentVotesCount = role.voteCount + 1
@@ -202,14 +205,25 @@ class NodeImpl(
     private fun doReplicationLog() {
         logger.debug { "replicate log" }
         context.group.listReplicationTarget().forEach {
-            doReplicationLog(it)
+            if (it.shouldReplicate(900)) {
+                doReplicationLog(it)
+            } else {
+                logger.debug { "node ${it.endpoint.id} is replicating, skip replication task" }
+            }
         }
     }
 
     private fun doReplicationLog(member: GroupMember, maxEntries: Int = -1) {
-        logger.trace { "replicate log from ${context.selfId} to ${member.endpoint.id}" }
-        val rpc = AppendEntriesRpc(role.term, context.selfId, member.getNextIndex(), maxEntries)
-        context.connector.sendAppendEntries(rpc, member.endpoint)
+        member.replicateNow()
+        try {
+            logger.trace { "replicate log from ${context.selfId} to ${member.endpoint.id}" }
+            val rpc = context.log.createAppendEntriesRpc(role.term, context.selfId, member.getNextIndex(), maxEntries)
+            context.connector.sendAppendEntries(rpc, member.endpoint)
+        } catch (e: EntryInSnapshotException) {
+            logger.debug { "log entry ${member.getNextIndex()} in snapshot, replicate with install snapshot RPC" }
+            val rpc = context.log.createInstallSnapshotRpc(role.term, context.selfId, 0, 1024)
+            context.connector.sendInstallSnapshot(rpc, member.endpoint)
+        }
     }
 
     @Subscribe
@@ -261,7 +275,7 @@ class NodeImpl(
         if (result) {
             context.log.advanceCommitIndex(min(rpc.leaderCommit, rpc.lastEntryIndex), rpc.term)
         }
-        return true
+        return result
     }
 
     @Subscribe
@@ -293,11 +307,19 @@ class NodeImpl(
             if (member.advanceReplicatingState(rpc.lastEntryIndex)) {
                 context.log.advanceCommitIndex(context.group.getMatchIndexOfMajor(), role.term)
             }
+            // node caught up
+            if (member.getNextIndex() >= context.log.nextIndex) {
+                member.stopReplicating()
+                return
+            }
         } else {
             if (!member.backOffNextIndex()) {
                 logger.warn { "cannot back off next index more,node $sourceNodeId" }
+                member.stopReplicating()
+                return
             }
         }
+        doReplicationLog(member)
 
     }
 
@@ -308,6 +330,74 @@ class NodeImpl(
 
     override fun registerStateMachine(stateMachine: StateMachine) {
         context.log.stateMachine = stateMachine
+    }
+
+    @Subscribe
+    fun onReceiveInstallSnapshotRpc(rpcMessage: InstallSnapshotRpcMessage) {
+        context.taskExecutor.submit {
+            context.connector.replyInstallSnapshot(
+                doProcessInstallSnapshotRpc(rpcMessage),
+                context.group.findMember(rpcMessage.sourceNodeId).endpoint
+            )
+        }
+    }
+
+    private fun doProcessInstallSnapshotRpc(rpcMessage: InstallSnapshotRpcMessage): InstallSnapshotResult {
+        val rpc = rpcMessage.rpc
+        if (rpc.term < role.term) {
+            return InstallSnapshotResult(role.term)
+        }
+        if (rpc.term > role.term) {
+            becomeFollower(rpc.term, null, rpc.leaderId, true)
+        }
+        context.log.installSnapshot(rpc)
+        return InstallSnapshotResult(rpc.term)
+    }
+
+    @Subscribe
+    fun onReceiveInstallSnapshotResult(resultMessage: InstallSnapshotResultMessage) {
+        context.taskExecutor.submit { doProcessInstallSnapshotResult(resultMessage) }
+    }
+
+    private fun doProcessInstallSnapshotResult(resultMessage: InstallSnapshotResultMessage) {
+        val result = resultMessage.result
+        if (result.term > role.term) {
+            becomeFollower(result.term, null, null, true)
+            return
+        }
+        if (role !is LeaderNodeRole) {
+            logger.warn {
+                "receive install snapshot result from node ${resultMessage.sourceNodeId}" +
+                        " but current node is not leader, ignore"
+            }
+            return
+        }
+        val sourceNodeId: NodeId = resultMessage.sourceNodeId
+        val member = context.group.getMember(sourceNodeId)
+        if (member == null) {
+            logger.info { "unexpected install snapshot result from node ${sourceNodeId}, node maybe removed" }
+            return
+        }
+
+        val rpc = resultMessage.rpc
+        if (rpc.done) {
+            member.advanceReplicatingState(rpc.lastIndex)
+            doReplicationLog(member)
+        } else {
+            //TODO load from config
+            val nextRpc: InstallSnapshotRpc = context.log.createInstallSnapshotRpc(
+                role.term, context.selfId,
+                rpc.offset + rpc.data.size, 1024
+            )
+            context.connector.sendInstallSnapshot(nextRpc, member.endpoint)
+        }
+    }
+
+    @Subscribe
+    fun onGenerateSnapshot(event: SnapshotGenerateEvent) {
+        context.taskExecutor.submit {
+            context.log.generateSnapshot(event.lastIncludedIndex, context.group.listEndpointExceptSelf())
+        }
     }
 
     @Synchronized

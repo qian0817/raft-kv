@@ -1,5 +1,7 @@
 package com.qianlei.log.entry
 
+import kotlinx.serialization.Serializable
+
 /**
  * 日志接口
  * 日志主要有一下四种
@@ -10,7 +12,13 @@ package com.qianlei.log.entry
  *
  * @author qianlei
  */
-interface Entry {
+
+@Serializable
+sealed class Entry(
+    val kind: Int,
+    val index: Int,
+    val term: Int
+) {
     companion object {
         const val KIND_NO_OP = 0
         const val KIND_GENERAL = 1
@@ -18,25 +26,38 @@ interface Entry {
         const val KIND_REMOVE_NODE = 4
     }
 
-    /**
-     * 日志类型
-     */
-    val kind: Int
+    abstract val commandBytes: ByteArray
 
-    /**
-     * 日志索引
-     */
-    val index: Int
-
-    val term: Int
-
-    /**
-     * 日志元信息
-     */
     val meta: EntryMeta
+        get() = EntryMeta(kind, index, term)
+}
 
-    /**
-     * 日志负载
-     */
-    val commandBytes: ByteArray
+@Serializable
+class NoOpEntry : Entry {
+    constructor(index: Int, term: Int) : super(KIND_NO_OP, index, term)
+
+    override val commandBytes: ByteArray
+        get() = byteArrayOf()
+
+    override fun toString(): String {
+        return "NoOpEntry(index=$index, term=$term)"
+    }
+}
+
+
+@Serializable
+class GeneralEntry : Entry {
+    override val commandBytes: ByteArray
+
+    constructor(
+        index: Int,
+        term: Int,
+        commandBytes: ByteArray
+    ) : super(KIND_GENERAL, index, term) {
+        this.commandBytes = commandBytes
+    }
+
+    override fun toString(): String {
+        return "GeneralEntry(index=$index, term=$term)"
+    }
 }

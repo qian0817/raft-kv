@@ -7,6 +7,7 @@ import com.qianlei.kv.message.Success
 import com.qianlei.kv.server.config.ConfigFactory
 import com.qianlei.kv.server.config.ServerConfig
 import com.qianlei.log.MemoryLog
+import com.qianlei.log.sequence.MemoryEntrySequence
 import com.qianlei.node.Node
 import com.qianlei.node.NodeContext
 import com.qianlei.node.NodeGroup
@@ -39,7 +40,7 @@ class ServerLauncher {
             NodeContext(
                 serverConfig.selfId,
                 NodeGroup(serverConfig.groupEndpoint, serverConfig.selfId),
-                MemoryLog(),
+                MemoryLog(MemoryEntrySequence(), eventBus),
                 NioConnector(NioEventLoopGroup(), true, nodeEndpoint.id, eventBus, nodeEndpoint.address.port),
                 DefaultScheduler(
                     serverConfig.minElectionTimeout,

@@ -3,6 +3,7 @@ package com.qianlei.node
 import com.google.common.eventbus.EventBus
 import com.qianlei.log.Log
 import com.qianlei.log.MemoryLog
+import com.qianlei.log.sequence.MemoryEntrySequence
 import com.qianlei.node.store.MemoryNodeStore
 import com.qianlei.node.store.NodeStore
 import com.qianlei.rpc.Connector
@@ -19,23 +20,19 @@ import java.util.*
  * @author qianlei
  */
 @Suppress("UnstableApiUsage")
-class NodeBuilder {
-    private val group: NodeGroup
+class NodeBuilder(
+    endpoints: Collection<NodeEndpoint>,
     private val selfId: NodeId
-    private val eventBus: EventBus
-    private var log: Log? = null
-    private var connector: Connector? = null
-    private var scheduler: Scheduler? = null
-    private var taskExecutor: TaskExecutor? = null
-    private var nodeStore: NodeStore? = null
+) {
+    private val group: NodeGroup = NodeGroup(endpoints, selfId)
+    private val eventBus: EventBus = EventBus(selfId.value)
+    private var log: Log = MemoryLog(MemoryEntrySequence(), eventBus)
+    private var connector: Connector = MockConnector()
+    private var scheduler: Scheduler = NullSchedule()
+    private var taskExecutor: TaskExecutor = DirectTaskExecutor()
+    private var nodeStore: NodeStore = MemoryNodeStore()
 
     constructor(endpoint: NodeEndpoint) : this(Collections.singleton(endpoint), endpoint.id)
-
-    constructor(endpoints: Collection<NodeEndpoint>, selfId: NodeId) {
-        this.group = NodeGroup(endpoints, selfId)
-        this.selfId = selfId
-        this.eventBus = EventBus(selfId.value)
-    }
 
     fun setConnector(connector: Connector): NodeBuilder {
         this.connector = connector
@@ -65,17 +62,16 @@ class NodeBuilder {
     fun build(): NodeImpl = NodeImpl(buildContext())
 
     private fun buildContext(): NodeContext {
-        val context = NodeContext(
+        return NodeContext(
             selfId,
             group,
-            log ?: MemoryLog(),
-            connector ?: MockConnector(),
-            scheduler ?: NullSchedule(),
+            log,
+            connector,
+            scheduler,
             eventBus,
-            taskExecutor ?: DirectTaskExecutor(),
-            MemoryNodeStore()
+            taskExecutor,
+            nodeStore
         )
-        return context
     }
 
 }
