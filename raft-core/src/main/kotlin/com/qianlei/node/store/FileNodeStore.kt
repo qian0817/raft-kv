@@ -27,20 +27,18 @@ class FileNodeStore : NodeStore {
         const val OFFSET_VOTED_FOR = 4L
     }
 
-    init {
-        initializeOrLoad()
-    }
-
     constructor(file: File) {
         // 判断文件存在，不存在则创建文件
         if (!file.exists()) {
             Files.createFile(file.toPath())
         }
         seekableFile = RandomAccessFileAdapter(file)
+        initializeOrLoad()
     }
 
     constructor(seekableFile: SeekableFile) {
         this.seekableFile = seekableFile
+        initializeOrLoad()
     }
 
     private fun initializeOrLoad() {

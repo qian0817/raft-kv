@@ -14,9 +14,5 @@ dependencies {
     implementation("org.slf4j", "slf4j-log4j12", "1.7.30")
     implementation("com.google.guava", "guava", "30.1-jre")
     implementation("io.netty", "netty-all", "4.1.58.Final")
-    implementation("io.ktor", "ktor-server-core", "1.5.1")
-    implementation("io.ktor", "ktor-server-netty", "1.5.1")
-    implementation("io.ktor", "ktor-serialization", "1.5.1")
-    testImplementation("io.ktor", "ktor-server-tests", "1.5.1")
     implementation("org.rocksdb", "rocksdbjni", "6.15.2")
 }

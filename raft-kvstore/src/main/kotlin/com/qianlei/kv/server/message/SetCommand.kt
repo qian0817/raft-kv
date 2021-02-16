@@ -1,4 +1,4 @@
-package com.qianlei.kv.message
+package com.qianlei.kv.server.message
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromByteArray

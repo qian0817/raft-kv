@@ -1,21 +1,26 @@
 package com.qianlei.kv.server
 
-import com.qianlei.kv.message.Redirect
-import com.qianlei.kv.message.SetCommand
-import com.qianlei.kv.message.Success
 import com.qianlei.kv.server.config.ServerConfig
+import com.qianlei.kv.server.message.CommandRequest
+import com.qianlei.kv.server.message.SetCommand
+import com.qianlei.kv.server.netty.buildResponse
 import com.qianlei.log.entry.EntryList
 import com.qianlei.log.snapshot.Snapshot
 import com.qianlei.log.statemachine.StateMachine
 import com.qianlei.log.statemachine.StateMachineContext
 import com.qianlei.node.Node
-import com.qianlei.node.role.RoleName
+import com.qianlei.node.role.RoleNameAndLeaderId
 import com.qianlei.support.SingleThreadTaskExecutor
+import io.netty.channel.ChannelHandlerContext
 import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.encodeToByteArray
 import kotlinx.serialization.protobuf.ProtoBuf
 import mu.KotlinLogging
+import org.rocksdb.Options
+import org.rocksdb.RocksDB
 import java.io.OutputStream
+import java.nio.file.Files
+import java.nio.file.Paths
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -24,38 +29,53 @@ import java.util.concurrent.ConcurrentHashMap
  */
 @Suppress("EXPERIMENTAL_API_USAGE")
 class Service(private val node: Node, serverConfig: ServerConfig) {
+    companion object {
+        init {
+            RocksDB.loadLibrary()
+        }
+    }
 
     private val logger = KotlinLogging.logger { }
-    private var map = ConcurrentHashMap<String, String>()
-    private val pendingCommands = ConcurrentHashMap<String, SetCommand>()
+    private val rocksDB: RocksDB
+    private val pendingCommands = ConcurrentHashMap<String, CommandRequest<*>>()
 
     init {
         node.registerStateMachine(StateMachineImpl())
+        val dbPath = serverConfig.dataPath
+        val options = Options()
+        options.setCreateIfMissing(true)
+        // 文件不存在，则先创建文件
+        if (!Files.isSymbolicLink(Paths.get(dbPath))) {
+            Files.createDirectories(Paths.get(dbPath))
+        }
+        rocksDB = RocksDB.open(options, dbPath)
     }
 
-    fun set(key: String, value: String): Any {
-        val redirect = checkLeadership()
-        if (redirect != null) {
-            return redirect
-        }
+    fun set(key: String, value: String, ctx: ChannelHandlerContext) {
         val command = SetCommand(key, value)
         logger.debug { "set ${command.key}" }
-        pendingCommands[command.requestId] = command
+        pendingCommands[command.requestId] = CommandRequest(command, ctx.channel())
         node.appendLog(command.toBytes())
-        return Success
     }
 
-    private fun checkLeadership(): Redirect? {
-        val state = node.getRoleNameAndLeaderId()
-        if (state.role != RoleName.LEADER) {
-            return Redirect(state.leaderId)
-        }
-        return null
+    fun getNodeState(): RoleNameAndLeaderId {
+        return node.getRoleNameAndLeaderId()
     }
 
     fun get(key: String): String? {
         logger.debug { "get $key" }
-        return map[key]
+        return rocksDB.get(key.encodeToByteArray())?.decodeToString()
+    }
+
+    fun getAll(): Map<String, String> {
+        val map = HashMap<String, String>()
+        val iterator = rocksDB.newIterator()
+        iterator.seekToFirst()
+        while (iterator.isValid) {
+            map[iterator.key().decodeToString()] = iterator.value().decodeToString()
+            iterator.next()
+        }
+        return map
     }
 
     private inner class StateMachineImpl : StateMachine {
@@ -79,14 +99,20 @@ class Service(private val node: Node, serverConfig: ServerConfig) {
         }
 
         override fun generateSnapshot(output: OutputStream) {
-            toSnapshot(map, output)
+            toSnapshot(getAll(), output)
         }
 
         override fun applySnapshot(snapshot: Snapshot) {
             logger.info { "apply snapshot, last included index ${snapshot.lastIncludeIndex}" }
             val size = snapshot.dataSize
             val data = snapshot.dataStream.readNBytes(size.toInt())
-            map = fromSnapshot(data)
+            val iterator = rocksDB.newIterator()
+            iterator.seekToFirst()
+            while (iterator.isValid) {
+                rocksDB.delete(iterator.key())
+                iterator.next()
+            }
+            fromSnapshot(data).forEach { (k, v) -> rocksDB.put(k.encodeToByteArray(), v.encodeToByteArray()) }
             lastApplied = snapshot.lastIncludeIndex
         }
 
@@ -122,7 +148,9 @@ class Service(private val node: Node, serverConfig: ServerConfig) {
 
         private fun applyCommand(commandBytes: ByteArray) {
             val command = SetCommand.fromBytes(commandBytes)
-            map[command.key] = command.value
+            rocksDB.put(command.key.encodeToByteArray(), command.value.encodeToByteArray())
+            val commandRequest = pendingCommands.remove(command.requestId) ?: return
+            commandRequest.reply(buildResponse(mapOf("key" to command.key, "value" to command.value)))
         }
 
         override fun shutdown() {
