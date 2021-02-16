@@ -105,9 +105,7 @@ class Service(private val node: Node, serverConfig: ServerConfig) {
         override fun applySnapshot(snapshot: Snapshot) {
             logger.info { "apply snapshot, last included index ${snapshot.lastIncludeIndex}" }
             val size = snapshot.dataSize
-            println(size)
             val data = snapshot.dataStream.readNBytes(size.toInt())
-            println(data.contentToString())
             val map = fromSnapshot(data)
             val iterator = rocksDB.newIterator()
             iterator.seekToFirst()

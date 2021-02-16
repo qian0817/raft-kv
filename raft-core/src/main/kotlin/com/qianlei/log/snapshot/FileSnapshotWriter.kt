@@ -27,7 +27,6 @@ class FileSnapshotWriter(
             ProtoBuf.encodeToByteArray(SnapshotHeader(lastIncludedIndex, lastIncludedTerm))
         output.writeInt(headerBytes.size)
         output.write(headerBytes)
-        out.write(headerBytes)
     }
 
     fun write(data: ByteArray) {
