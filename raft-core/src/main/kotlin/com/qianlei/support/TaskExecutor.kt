@@ -8,18 +8,12 @@ import java.util.concurrent.Future
  * @author qianlei
  */
 interface TaskExecutor {
-    /**
-     * 提交任务，无返回值
-     */
+    /** 提交任务，无返回值 */
     fun submit(task: Runnable): Future<*>
 
-    /**
-     * 提交任务，有返回值
-     */
+    /** 提交任务，有返回值 */
     fun <V> submit(task: Callable<V>): Future<V>
 
-    /**
-     * 关闭任务执行器
-     */
+    /** 关闭任务执行器 */
     fun shutdown()
 }

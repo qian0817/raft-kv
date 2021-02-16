@@ -34,8 +34,18 @@ abstract class AbstractLog(
     protected var snapshot: Snapshot = EmptySnapshot()
     protected var snapshotBuilder: SnapshotBuilder<out Snapshot> = NullSnapshotBuilder()
 
+    /**
+     *
+     */
     override val nextIndex
         get() = entrySequence.nextLogIndex
+
+    /**
+     * 日志条目分为两种状态
+     * 1. 已追加但是尚未持久化
+     * 2. 已经持久化
+     * commitIndex 表示已经持久化的日志条目索引
+     */
     override var commitIndex: Int = 0
 
     override var stateMachine: StateMachine = EmptyStateMachine()

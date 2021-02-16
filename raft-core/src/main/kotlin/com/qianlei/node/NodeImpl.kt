@@ -11,36 +11,30 @@ import com.qianlei.schedule.LogReplicationTask
 import mu.KotlinLogging
 import kotlin.math.min
 
+/**
+ * @author qianlei
+ */
 @Suppress("UnstableApiUsage")
 class NodeImpl(
-    /**
-     * 组件上下文信息
-     */
+    /** 组件上下文信息 */
     val context: NodeContext
 ) : Node {
     private val logger = KotlinLogging.logger { }
 
-    /**
-     * 节点是否已启动
-     */
+    /** 节点是否已启动 */
     private var started = false
 
-    /**
-     * 当前角色
-     */
-    internal lateinit var role: AbstractNodeRole
+    /** 当前角色 */
+    internal lateinit var role: NodeRole
 
     @Synchronized
     override fun start() {
-        if (started) {
-            return
-        }
-        // 注册自己到 eventBus
+        check(!started) { "already start" }
         context.eventBus.register(this)
-        // 初始化连接器
         context.connector.initialize()
-        // 启动时为 follower 角色
+        // 从初始化时
         val store = context.store
+        // 启动时为 follower 角色
         changeRole(FollowerNodeRole(store.term, store.votedFor, electionTimeOut = scheduleElectionTimeout()))
         started = true
     }
@@ -51,9 +45,9 @@ class NodeImpl(
     }
 
     /**
-     * 处理角色变更
+     * 处理角色变更,将当前节点的角色变为[newRole]
      */
-    private fun changeRole(newRole: AbstractNodeRole) {
+    private fun changeRole(newRole: NodeRole) {
         logger.debug { "node${context.selfId}, role state changed ${role.name} -> ${newRole.name}" }
         context.store.term = newRole.term
         if (newRole is FollowerNodeRole) {
@@ -88,12 +82,9 @@ class NodeImpl(
     /**
      * 处理选举超时的代码
      * 设置选举超时需要做的事情包括变更节点角色以及发送 RequestVote 消息给其他节点
-     *
      */
     private fun doProcessElectionTimeout() {
-        /**
-         * 对于 Leader 来说不可能发生选举超时
-         */
+        //对于 Leader 来说不可能发生选举超时
         if (role is LeaderNodeRole) {
             logger.warn { "node ${context.selfId} current role is leader ,is impossible election timeout" }
             return
@@ -111,7 +102,7 @@ class NodeImpl(
     }
 
     /**
-     * Subscribe 注解表示订阅 EventBus 中类型为 RequestVoteRpcMessage 的消息
+     * 处理接收到 RequestVoteRpcMessage 的信息[rpcMessage]
      */
     @Subscribe
     fun onReceiveRequestVoteRpc(rpcMessage: RequestVoteRpcMessage) {
@@ -122,7 +113,11 @@ class NodeImpl(
     }
 
     /**
-     * 处理 requestVote 消息
+     * 处理 requestVoteRpc 消息[message]
+     * 需要先比较消息中的 term 于自己的 term，之后根据日志决定是否进行投票
+     * 如果对方的 term 比自己小，那么不投票并且返回自己的 term 给对方
+     * 如果对方的 term 比自己大，那么将自己切换为 Follower 角色
+     * 如果对方的 term 与自己相同，会将自己的角色切换为 Follower
      */
     private fun doProcessRequestVoteRpc(message: RequestVoteRpcMessage): RequestVoteResult {
         val rpc = message.rpc
@@ -131,7 +126,7 @@ class NodeImpl(
             logger.debug { "term from rpc < current term" }
             return RequestVoteResult(role.term, false)
         }
-        // 受到其他节点发来的信息时，比较元信息，判断是否进行投票
+        // 根据日志决定是否进行投票
         val vote = !context.log.isNewerThan(rpc.lastLogIndex, rpc.lastLogTerm)
         // 如果对方的 term 比自己大，那么将自己切换为 Follower 角色
         if (rpc.term > role.term) {
@@ -158,13 +153,22 @@ class NodeImpl(
         }
     }
 
+    /**
+     * 处理接收到 RequestVoteResult 消息的行为
+     */
     @Subscribe
     fun onReceiveRequestVoteResult(result: RequestVoteResult) {
         context.taskExecutor.submit { doProcessRequestVoteResult(result) }
     }
 
+    /**
+     * 收到 RequestVote 响应处理
+     * 收到 RequestVote 响应响应以后，需要根据票数决定是否变为 leader
+     *
+     */
     private fun doProcessRequestVoteResult(result: RequestVoteResult) {
         val role = role
+        // 如果对方的 term 比自己大，那么退化为 follower
         if (result.term > role.term) {
             becomeFollower(result.term, null, null, true)
             return
@@ -180,11 +184,13 @@ class NodeImpl(
         val countOfMajor = context.group.count()
         logger.debug { "votes count $currentVotesCount, node count $countOfMajor" }
         role.cancelTimeoutOrTask()
-        // 超过一半的票数
+        // 如果收到超过一半的票数
+        // 就将自己变为 Leader
         if (currentVotesCount > countOfMajor / 2) {
             logger.info { "become leader,term ${role.term}" }
             context.group.resetReplicatingStates(context.log.nextIndex)
             changeRole(LeaderNodeRole(role.term, scheduleLogReplicationTask()))
+            // 称为 Leader 后立即发送心跳信息
             context.log.appendEntry(role.term)
         } else {
             changeRole(CandidateNodeRole(role.term, scheduleElectionTimeout(), currentVotesCount))
@@ -204,7 +210,7 @@ class NodeImpl(
 
     private fun doReplicationLog() {
         logger.debug { "replicate log" }
-        context.group.listReplicationTarget().forEach {
+        context.group.listGroupMemberExceptSelf().forEach {
             if (it.shouldReplicate(900)) {
                 doReplicationLog(it)
             } else {
@@ -296,7 +302,7 @@ class NodeImpl(
             logger.warn { "receive append entries from node ${message.sourceNodeId} but current node is not leader" }
         }
         val sourceNodeId = message.sourceNodeId
-        val member = context.group.getMember(sourceNodeId)
+        val member = context.group.findMemberOrNull(sourceNodeId)
         // 没有指定的成员
         if (member == null) {
             logger.info { "unexpected append entries from node $sourceNodeId, node maybe removed" }
@@ -373,7 +379,7 @@ class NodeImpl(
             return
         }
         val sourceNodeId: NodeId = resultMessage.sourceNodeId
-        val member = context.group.getMember(sourceNodeId)
+        val member = context.group.findMemberOrNull(sourceNodeId)
         if (member == null) {
             logger.info { "unexpected install snapshot result from node ${sourceNodeId}, node maybe removed" }
             return

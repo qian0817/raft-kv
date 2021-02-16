@@ -3,12 +3,12 @@ package com.qianlei.log.entry
 import kotlinx.serialization.Serializable
 
 /**
- * 日志接口
- * 日志主要有一下四种
+ * 日志条目
+ * 在 Raft 中每个操作都会被当作一个日志条目
+ * 所有来自客户端的数据变更操作都会被当作一个日志条目追加到节点日志中去
+ * 日志条目种类包括
  * 1. 普通日志，负载为上层服务的操作
  * 2. NO_OP日志，选举产生的新 leader 节点增加的第一条空日志
- * 3.
- * 4.
  *
  * @author qianlei
  */

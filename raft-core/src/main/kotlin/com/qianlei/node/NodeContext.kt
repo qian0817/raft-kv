@@ -7,6 +7,10 @@ import com.qianlei.rpc.Connector
 import com.qianlei.schedule.Scheduler
 import com.qianlei.support.TaskExecutor
 
+/**
+ * 节点上下文信息
+ * @author qianlei
+ */
 @Suppress("UnstableApiUsage")
 data class NodeContext(
     val selfId: NodeId,

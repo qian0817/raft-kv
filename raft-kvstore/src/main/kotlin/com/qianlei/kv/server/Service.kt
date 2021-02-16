@@ -98,20 +98,24 @@ class Service(private val node: Node, serverConfig: ServerConfig) {
         }
 
         override fun generateSnapshot(output: OutputStream) {
+            logger.info { "generateSnapshot" }
             toSnapshot(getAll(), output)
         }
 
         override fun applySnapshot(snapshot: Snapshot) {
             logger.info { "apply snapshot, last included index ${snapshot.lastIncludeIndex}" }
             val size = snapshot.dataSize
+            println(size)
             val data = snapshot.dataStream.readNBytes(size.toInt())
+            println(data.contentToString())
+            val map = fromSnapshot(data)
             val iterator = rocksDB.newIterator()
             iterator.seekToFirst()
             while (iterator.isValid) {
                 rocksDB.delete(iterator.key())
                 iterator.next()
             }
-            fromSnapshot(data).forEach { (k, v) -> rocksDB.put(k.encodeToByteArray(), v.encodeToByteArray()) }
+            map.forEach { (k, v) -> rocksDB.put(k.encodeToByteArray(), v.encodeToByteArray()) }
             lastApplied = snapshot.lastIncludeIndex
         }
 

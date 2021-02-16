@@ -41,7 +41,7 @@ class RootDir(private val baseDir: File) {
     fun rename(dir: LogDir, lastIncludedIndex: Int): LogDir {
         val destDir = LogGeneration(baseDir, lastIncludedIndex)
         check(!destDir.exists()) { "failed to rename, dest dir $destDir exists" }
-        logger.info("rename dir {} to {}", dir, destDir)
+        logger.info { "rename dir ${dir} to ${destDir}" }
         check(dir.renameTo(destDir)) { "failed to rename $dir to $destDir" }
         return destDir
     }
