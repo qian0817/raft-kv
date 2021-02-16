@@ -10,14 +10,10 @@ import java.io.IOException
 abstract class AbstractLogDir(protected val dir: File) : LogDir {
     override fun initialize() {
         if (!dir.exists() && !dir.mkdir()) {
-            throw LogException("failed to create directory $dir")
+            throw IOException("failed to create directory $dir")
         }
-        try {
-            getEntriesFile().createNewFile()
-            getEntryOffsetIndexFile().createNewFile()
-        } catch (e: IOException) {
-            throw LogException("failed to create file", e)
-        }
+        getEntriesFile().createNewFile()
+        getEntryOffsetIndexFile().createNewFile()
     }
 
     override fun exists(): Boolean {

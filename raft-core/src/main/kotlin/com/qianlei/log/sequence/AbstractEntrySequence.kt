@@ -27,10 +27,10 @@ abstract class AbstractEntrySequence(
     protected fun doGetLastLogIndex() = nextLogIndex - 1
 
     override val firstLogIndex: Int
-        get() = if (isEmpty()) throw EmptySequenceException() else doGetFirstLogIndex()
+        get() = if (isEmpty()) throw IllegalArgumentException("entrySequence is empty") else doGetFirstLogIndex()
 
     override val lastLogIndex: Int
-        get() = if (isEmpty()) throw EmptySequenceException() else doGetLastLogIndex()
+        get() = if (isEmpty()) throw IllegalArgumentException("entrySequence is empty") else doGetLastLogIndex()
 
     override fun isEntryPresent(index: Int) =
         !isEmpty() && index >= doGetFirstLogIndex() && index <= doGetLastLogIndex()
