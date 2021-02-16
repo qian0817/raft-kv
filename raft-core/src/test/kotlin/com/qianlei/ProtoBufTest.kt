@@ -16,6 +16,9 @@ import kotlin.test.assertEquals
 class ProtoBufTest {
     @Test
     fun testProtoBuf() {
+        val toByteArray = ProtoBuf.encodeToByteArray(mapOf("a" to "b"))
+        val map = ProtoBuf.decodeFromByteArray<Map<String, String>>(toByteArray)
+        assertEquals(map, mapOf("a" to "b"))
         val rpc = InstallSnapshotRpc(
             1,
             NodeId.of("A"),

@@ -4,7 +4,6 @@ import com.qianlei.kv.server.config.ServerConfig
 import com.qianlei.kv.server.message.CommandRequest
 import com.qianlei.kv.server.message.SetCommand
 import com.qianlei.kv.server.netty.buildResponse
-import com.qianlei.log.entry.EntryList
 import com.qianlei.log.snapshot.Snapshot
 import com.qianlei.log.statemachine.StateMachine
 import com.qianlei.log.statemachine.StateMachineContext
@@ -117,15 +116,14 @@ class Service(private val node: Node, serverConfig: ServerConfig) {
         }
 
         fun toSnapshot(map: Map<String, String>, output: OutputStream) {
-            val list = map.map { it.key to it.value }.toList()
-            val data = ProtoBuf.encodeToByteArray(EntryList(list))
+            val data = ProtoBuf.encodeToByteArray(map)
             output.write(data)
         }
 
         fun fromSnapshot(data: ByteArray): ConcurrentHashMap<String, String> {
             val map = ConcurrentHashMap<String, String>()
-            val list = ProtoBuf.decodeFromByteArray<EntryList>(data)
-            list.entryList.forEach { map[it.first] = it.second }
+            val list = ProtoBuf.decodeFromByteArray<Map<String, String>>(data)
+            list.forEach { (key, value) -> map[key] = value }
             return map
         }
 

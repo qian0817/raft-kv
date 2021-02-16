@@ -25,8 +25,8 @@ class FileSnapshotWriter(
     init {
         val headerBytes =
             ProtoBuf.encodeToByteArray(SnapshotHeader(lastIncludedIndex, lastIncludedTerm))
-        output.write(headerBytes)
         output.writeInt(headerBytes.size)
+        output.write(headerBytes)
         out.write(headerBytes)
     }
 

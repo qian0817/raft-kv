@@ -3,7 +3,6 @@ package com.qianlei.log.sequence
 import com.qianlei.log.LogDir
 import com.qianlei.log.entry.Entry
 import com.qianlei.log.entry.EntryFactory
-import com.qianlei.log.entry.EntryMeta
 import java.util.*
 import kotlin.math.min
 
@@ -104,18 +103,6 @@ class FileEntrySequence(
         return entriesFile.loadEntry(offset, entryFactory)
     }
 
-    override val lastEntry: Entry?
-        get() {
-            if (isEmpty()) {
-                return null
-            }
-            if (!pendingEntries.isEmpty()) {
-                return pendingEntries.last
-            }
-            return getEntryInFile(entryIndexFile.maxEntryIndex)
-        }
-
-
     override fun doAppend(entry: Entry) {
         pendingEntries.add(entry)
     }
@@ -143,16 +130,6 @@ class FileEntrySequence(
             nextLogIndex = logIndexOffset
             commitIndex = logIndexOffset - 1
         }
-    }
-
-    override fun getEntryMeta(index: Int): EntryMeta? {
-        if (!isEntryPresent(index)) {
-            return null
-        }
-        if (entryIndexFile.isEmpty()) {
-            return pendingEntries[index - doGetFirstLogIndex()].meta
-        }
-        return entryIndexFile[index].toEntryMeta()
     }
 
     override fun commit(index: Int) {
