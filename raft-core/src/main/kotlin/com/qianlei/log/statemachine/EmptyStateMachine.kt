@@ -4,10 +4,8 @@ import com.qianlei.log.snapshot.Snapshot
 import java.io.OutputStream
 
 class EmptyStateMachine : StateMachine {
-    private var lastApplied = 0
-    override fun getLastApplied(): Int {
-        return lastApplied
-    }
+    override var lastApplied = 0
+        private set
 
     override fun applyLog(
         context: StateMachineContext,

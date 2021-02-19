@@ -82,10 +82,8 @@ class Service(private val node: Node, serverConfig: ServerConfig) {
         private val taskExecutor = SingleThreadTaskExecutor("state-machine")
 
         @Volatile
-        private var lastApplied = 0
-        override fun getLastApplied(): Int {
-            return lastApplied
-        }
+        override var lastApplied = 0
+            private set
 
         override fun applyLog(context: StateMachineContext, index: Int, commandBytes: ByteArray, firstLogIndex: Int) {
             taskExecutor.submit {

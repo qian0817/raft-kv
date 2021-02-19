@@ -8,7 +8,7 @@ import java.io.OutputStream
  * @author qianlei
  */
 interface StateMachine {
-    fun getLastApplied(): Int
+    val lastApplied: Int
     fun applyLog(context: StateMachineContext, index: Int, commandBytes: ByteArray, firstLogIndex: Int)
     fun shouldGenerateSnapshot(firstLogIndex: Int, lastApplied: Int): Boolean
     fun generateSnapshot(output: OutputStream)

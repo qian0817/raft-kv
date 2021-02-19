@@ -214,7 +214,7 @@ abstract class AbstractLog(
         if (entrySequence.isEmpty() || index >= entrySequence.lastLogIndex) {
             return
         }
-        val lastApplied = stateMachine.getLastApplied()
+        val lastApplied = stateMachine.lastApplied
         if (index < lastApplied &&
             entrySequence.subList(index + 1, lastApplied + 1).stream().anyMatch { it.kind == KIND_GENERAL }
         ) {
@@ -251,7 +251,7 @@ abstract class AbstractLog(
 
     private fun advanceApplyIndex() {
         // start up and snapshot exists
-        var lastApplied = stateMachine.getLastApplied()
+        var lastApplied = stateMachine.lastApplied
         val lastIncludedIndex = snapshot.lastIncludeIndex
         if (lastApplied == 0 && lastIncludedIndex > 0) {
             applySnapshot(snapshot)
