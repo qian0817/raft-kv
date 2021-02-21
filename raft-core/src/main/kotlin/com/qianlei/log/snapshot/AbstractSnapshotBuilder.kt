@@ -17,7 +17,7 @@ abstract class AbstractSnapshotBuilder<T : Snapshot>(
         require(rpc.offset == offset) {
             "unexpected offset,excepted $offset , but was ${rpc.offset}"
         }
-        require(rpc.lastIndex == lastIncludedIndex || rpc.lastTerm == lastIncludedTerm) {
+        require(rpc.lastIndex == lastIncludedIndex && rpc.lastTerm == lastIncludedTerm) {
             "unexpected last included index or term"
         }
         doWrite(rpc.data)

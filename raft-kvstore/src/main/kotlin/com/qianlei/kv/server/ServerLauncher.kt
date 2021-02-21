@@ -48,7 +48,7 @@ class ServerLauncher {
             )
         )
         node.start()
-        val service = Service(node, serverConfig)
+        val service = RocksDBService(node, serverConfig)
         HttpServer(service, serverConfig).start()
         Runtime.getRuntime().addShutdownHook(Thread({ node.stop() }, "shutdown"))
     }

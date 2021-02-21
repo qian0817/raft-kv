@@ -71,11 +71,10 @@ class FileNodeStore : NodeStore {
     override var votedFor: NodeId? = null
         set(value) {
             seekableFile.seek(OFFSET_VOTED_FOR)
-            if (field == null) {
+            if (value == null) {
                 seekableFile.writeInt(0)
-                seekableFile.truncate(8L)
             } else {
-                val bytes = field!!.value.encodeToByteArray()
+                val bytes = value.value.encodeToByteArray()
                 seekableFile.writeInt(bytes.size)
                 seekableFile.write(bytes)
             }

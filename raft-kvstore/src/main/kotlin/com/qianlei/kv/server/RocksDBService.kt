@@ -27,7 +27,7 @@ import java.util.concurrent.ConcurrentHashMap
  * @author qianlei
  */
 @Suppress("EXPERIMENTAL_API_USAGE")
-class Service(private val node: Node, serverConfig: ServerConfig) {
+class RocksDBService(private val node: Node, serverConfig: ServerConfig) : KVService {
     companion object {
         init {
             RocksDB.loadLibrary()
@@ -39,7 +39,6 @@ class Service(private val node: Node, serverConfig: ServerConfig) {
     private val pendingCommands = ConcurrentHashMap<String, CommandRequest<*>>()
 
     init {
-        node.registerStateMachine(StateMachineImpl())
         val dbPath = serverConfig.dataPath
         val options = Options()
         options.setCreateIfMissing(true)
@@ -48,25 +47,26 @@ class Service(private val node: Node, serverConfig: ServerConfig) {
             Files.createDirectories(Paths.get(dbPath))
         }
         rocksDB = RocksDB.open(options, dbPath)
+        node.registerStateMachine(StateMachineImpl())
     }
 
-    fun set(key: String, value: String, ctx: ChannelHandlerContext) {
+    override fun set(key: String, value: String, ctx: ChannelHandlerContext) {
         val command = SetCommand(key, value)
         logger.debug { "set ${command.key}" }
         pendingCommands[command.requestId] = CommandRequest(command, ctx.channel())
         node.appendLog(command.toBytes())
     }
 
-    fun getNodeState(): RoleNameAndLeaderId {
+    override fun getNodeState(): RoleNameAndLeaderId {
         return node.getRoleNameAndLeaderId()
     }
 
-    fun get(key: String): String? {
+    override fun get(key: String): String? {
         logger.debug { "get $key" }
-        return rocksDB.get(key.encodeToByteArray())?.decodeToString()
+        return rocksDB.get(key)
     }
 
-    fun getAll(): Map<String, String> {
+    override fun getAll(): Map<String, String> {
         val map = HashMap<String, String>()
         val iterator = rocksDB.newIterator()
         iterator.seekToFirst()
@@ -82,8 +82,11 @@ class Service(private val node: Node, serverConfig: ServerConfig) {
         private val taskExecutor = SingleThreadTaskExecutor("state-machine")
 
         @Volatile
-        override var lastApplied = 0
-            private set
+        override var lastApplied = rocksDB.get("lastApplied")?.toIntOrNull() ?: 0
+            private set(value) {
+                rocksDB.put("lastApplied", value.toString())
+                field = value
+            }
 
         override fun applyLog(context: StateMachineContext, index: Int, commandBytes: ByteArray, firstLogIndex: Int) {
             taskExecutor.submit {
@@ -111,7 +114,7 @@ class Service(private val node: Node, serverConfig: ServerConfig) {
                 rocksDB.delete(iterator.key())
                 iterator.next()
             }
-            map.forEach { (k, v) -> rocksDB.put(k.encodeToByteArray(), v.encodeToByteArray()) }
+            map.forEach { (k, v) -> rocksDB.put(k, v) }
             lastApplied = snapshot.lastIncludeIndex
         }
 
@@ -136,7 +139,7 @@ class Service(private val node: Node, serverConfig: ServerConfig) {
             if (index <= lastApplied) {
                 return
             }
-            logger.debug("apply log {}", index)
+            logger.debug { "apply log $index" }
             applyCommand(commandBytes)
             lastApplied = index
             if (shouldGenerateSnapshot(firstLogIndex, index)) {
@@ -146,7 +149,7 @@ class Service(private val node: Node, serverConfig: ServerConfig) {
 
         private fun applyCommand(commandBytes: ByteArray) {
             val command = SetCommand.fromBytes(commandBytes)
-            rocksDB.put(command.key.encodeToByteArray(), command.value.encodeToByteArray())
+            rocksDB.put(command.key, command.value)
             val commandRequest = pendingCommands.remove(command.requestId) ?: return
             commandRequest.reply(buildResponse(mapOf("key" to command.key, "value" to command.value)))
         }
@@ -154,5 +157,17 @@ class Service(private val node: Node, serverConfig: ServerConfig) {
         override fun shutdown() {
             taskExecutor.shutdown()
         }
+    }
+
+    fun RocksDB.put(key: String, value: String?) {
+        if (value == null) {
+            delete(key.encodeToByteArray())
+        } else {
+            put(key.encodeToByteArray(), value.encodeToByteArray())
+        }
+    }
+
+    fun RocksDB.get(key: String): String? {
+        return get(key.encodeToByteArray())?.decodeToString()
     }
 }

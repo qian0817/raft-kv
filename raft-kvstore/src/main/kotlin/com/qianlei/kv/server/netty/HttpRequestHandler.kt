@@ -1,6 +1,6 @@
 package com.qianlei.kv.server.netty
 
-import com.qianlei.kv.server.Service
+import com.qianlei.kv.server.KVService
 import com.qianlei.node.role.RoleName
 import io.netty.channel.ChannelFutureListener
 import io.netty.channel.ChannelHandlerContext
@@ -13,7 +13,7 @@ import io.netty.handler.codec.http.*
  * @author qianlei
  */
 class HttpRequestHandler(
-    private val service: Service
+    private val service: KVService
 ) : SimpleChannelInboundHandler<FullHttpRequest>() {
     override fun channelRead0(ctx: ChannelHandlerContext, req: FullHttpRequest) {
         // 获取请求的uri

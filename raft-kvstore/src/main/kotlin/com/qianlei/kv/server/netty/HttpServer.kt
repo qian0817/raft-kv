@@ -1,6 +1,6 @@
 package com.qianlei.kv.server.netty
 
-import com.qianlei.kv.server.Service
+import com.qianlei.kv.server.KVService
 import com.qianlei.kv.server.config.ServerConfig
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.ChannelInitializer
@@ -16,7 +16,7 @@ import java.net.InetSocketAddress
  *
  * @author qianlei
  */
-class HttpServer(private val service: Service, private val serverConfig: ServerConfig) {
+class HttpServer(private val service: KVService, private val serverConfig: ServerConfig) {
     fun start() {
         val bootstrap = ServerBootstrap()
             .group(NioEventLoopGroup())
