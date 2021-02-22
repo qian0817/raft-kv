@@ -1,7 +1,6 @@
 package com.qianlei.log.sequence
 
 import com.qianlei.log.entry.Entry
-import com.qianlei.log.entry.EntryFactory
 import com.qianlei.log.entry.GeneralEntry
 import com.qianlei.log.entry.NoOpEntry
 import com.qianlei.support.ByteArraySeekableFile
@@ -41,12 +40,11 @@ class EntriesFileTest {
         assertEquals(0L, file.appendEntry(NoOpEntry(2, 3)))
         assertEquals(16L, file.appendEntry(GeneralEntry(3, 3, "test".encodeToByteArray())))
         assertEquals(36L, file.appendEntry(GeneralEntry(4, 3, "foo".encodeToByteArray())))
-        val factory = EntryFactory()
-        var entry = file.loadEntry(0L, factory)
+        var entry = file.loadEntry(0L)
         assertEquals(Entry.KIND_NO_OP, entry.kind)
         assertEquals(2, entry.index)
         assertEquals(3, entry.term)
-        entry = file.loadEntry(36L, factory)
+        entry = file.loadEntry(36L)
         assertEquals(Entry.KIND_GENERAL, entry.kind)
         assertEquals(4, entry.index)
         assertEquals(3, entry.term)

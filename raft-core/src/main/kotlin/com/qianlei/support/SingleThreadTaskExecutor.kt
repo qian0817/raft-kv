@@ -19,13 +19,7 @@ class SingleThreadTaskExecutor(
     private val executorService = Executors.newSingleThreadExecutor(threadFactory)
 
     override fun submit(task: Runnable): Future<*> {
-        return executorService.submit {
-            try {
-                task.run()
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
+        return executorService.submit { task.run() }
     }
 
     override fun <V> submit(task: Callable<V>): Future<V> {

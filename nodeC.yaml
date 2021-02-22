@@ -18,7 +18,7 @@ groupEndpoint:
 selfId:
   value: "C"
 dataPath: "data/3"
-minElectionTimeout: 2000
+minElectionTimeout: 3000
 maxElectionTimeout: 4000
-logReplicationDelay: 1000
-logReplicationInterval: 200
+logReplicationDelay: 100
+logReplicationInterval: 1000

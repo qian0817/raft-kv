@@ -1,7 +1,6 @@
 package com.qianlei.log
 
 import com.google.common.eventbus.EventBus
-import com.qianlei.log.Log.Companion.ALL_ENTRIES
 import com.qianlei.log.entry.NoOpEntry
 import com.qianlei.node.NodeId
 import kotlin.test.Test
@@ -16,7 +15,7 @@ class MemoryLogTest {
         val log = MemoryLog(eventBus = EventBus())
         log.appendEntry(1)
         log.appendEntry(1)
-        val rpc = log.createAppendEntriesRpc(1, NodeId.of("A"), 1, ALL_ENTRIES)
+        val rpc = log.createAppendEntriesRpc(1, NodeId.of("A"), 1)
         assertEquals(1, rpc.term)
         assertEquals(0, rpc.prevLogIndex)
         assertEquals(0, rpc.prevLogTerm)

@@ -10,44 +10,14 @@ import java.io.RandomAccessFile
  *
  * @author
  */
-class RandomAccessFileAdapter(private val file: File, mode: String = "rw") : SeekableFile {
-    private var randomAccessFile = RandomAccessFile(file, mode)
+class RandomAccessFileAdapter(
+    private val file: File, mode: String = "rw"
+) : SeekableFile, RandomAccessFile(file, mode) {
+    override fun flush() {}
 
-    override fun seek(position: Long) {
-        randomAccessFile.seek(position)
-    }
+    override fun size(): Long = length()
 
-    override fun writeInt(i: Int) {
-        randomAccessFile.writeInt(i)
-    }
-
-    override fun writeLong(l: Long) {
-        randomAccessFile.writeLong(l)
-    }
-
-    override fun write(b: ByteArray) {
-        randomAccessFile.write(b)
-    }
-
-    override fun readInt(): Int {
-        return randomAccessFile.readInt()
-    }
-
-    override fun readLong(): Long {
-        return randomAccessFile.readLong()
-    }
-
-    override fun read(b: ByteArray): Int {
-        return randomAccessFile.read(b)
-    }
-
-    override fun size(): Long {
-        return randomAccessFile.length()
-    }
-
-    override fun truncate(size: Long) {
-        randomAccessFile.setLength(size)
-    }
+    override fun truncate(size: Long) = setLength(size)
 
     override fun inputStream(start: Long): InputStream {
         val input = FileInputStream(file)
@@ -57,14 +27,5 @@ class RandomAccessFileAdapter(private val file: File, mode: String = "rw") : See
         return input
     }
 
-    override fun position(): Long {
-        return randomAccessFile.filePointer
-    }
-
-    override fun flush() {
-    }
-
-    override fun close() {
-        randomAccessFile.close()
-    }
+    override fun position(): Long = filePointer
 }

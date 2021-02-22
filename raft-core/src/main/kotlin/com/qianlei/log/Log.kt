@@ -15,10 +15,6 @@ import com.qianlei.rpc.message.InstallSnapshotRpc
  * @author qianlei
  */
 interface Log {
-    companion object {
-        const val ALL_ENTRIES = -1
-    }
-
     /**
      * 最后一条日志的元信息
      */
@@ -27,12 +23,7 @@ interface Log {
     /**
      * 创建 AppendEntriesRpc 消息
      */
-    fun createAppendEntriesRpc(
-        term: Int,
-        selfId: NodeId,
-        nextIndex: Int,
-        maxEntries: Int
-    ): AppendEntriesRpc
+    fun createAppendEntriesRpc(term: Int, selfId: NodeId, nextIndex: Int): AppendEntriesRpc
 
     /**
      * 获取下一条日志的目录

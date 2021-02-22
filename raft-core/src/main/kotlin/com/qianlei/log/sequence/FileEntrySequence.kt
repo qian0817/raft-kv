@@ -2,7 +2,6 @@ package com.qianlei.log.sequence
 
 import com.qianlei.log.LogDir
 import com.qianlei.log.entry.Entry
-import com.qianlei.log.entry.EntryFactory
 import java.util.*
 import kotlin.math.min
 
@@ -37,7 +36,6 @@ class FileEntrySequence(
     logIndexOffset: Int
 ) : AbstractEntrySequence(logIndexOffset) {
     private val pendingEntries = LinkedList<Entry>()
-    private val entryFactory = EntryFactory()
     override var commitIndex: Int = 0
 
     init {
@@ -100,7 +98,7 @@ class FileEntrySequence(
 
     private fun getEntryInFile(index: Int): Entry {
         val offset = entryIndexFile.getOffset(index)
-        return entriesFile.loadEntry(offset, entryFactory)
+        return entriesFile.loadEntry(offset)
     }
 
     override fun doAppend(entry: Entry) {

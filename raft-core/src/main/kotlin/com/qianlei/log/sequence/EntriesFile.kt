@@ -33,10 +33,8 @@ class EntriesFile(private val seekableFile: SeekableFile) {
     /**
      * 从指定偏移加载日志条目
      */
-    fun loadEntry(offset: Long, factory: EntryFactory): Entry {
-        if (offset > seekableFile.size()) {
-            throw IllegalArgumentException("offset > size")
-        }
+    fun loadEntry(offset: Long): Entry {
+        require(offset <= seekableFile.size()) { "offset > size" }
         seekableFile.seek(offset)
         val kind = seekableFile.readInt()
         val index = seekableFile.readInt()
@@ -44,7 +42,7 @@ class EntriesFile(private val seekableFile: SeekableFile) {
         val length = seekableFile.readInt()
         val bytes = ByteArray(length)
         seekableFile.read(bytes)
-        return factory.create(kind, index, term, bytes)
+        return EntryFactory.create(kind, index, term, bytes)
     }
 
     /**

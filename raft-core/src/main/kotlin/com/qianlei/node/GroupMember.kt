@@ -47,7 +47,7 @@ data class GroupMember(
     }
 
     fun replicateAt(replicatedAt: Long) {
-        val replicatingState: ReplicatingState = ensureReplicatingState()
+        val replicatingState = ensureReplicatingState()
         replicatingState.replicating = true
         replicatingState.lastReplicatedAt = replicatedAt
     }
@@ -61,7 +61,7 @@ data class GroupMember(
     }
 
     fun shouldReplicate(readTimeout: Long): Boolean {
-        val replicatingState: ReplicatingState = ensureReplicatingState()
+        val replicatingState = ensureReplicatingState()
         return !replicatingState.replicating ||
                 System.currentTimeMillis() - replicatingState.lastReplicatedAt >= readTimeout
     }

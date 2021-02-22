@@ -1,5 +1,6 @@
 package com.qianlei.kv.server
 
+import com.qianlei.kv.server.netty.buildResponse
 import com.qianlei.node.NodeId
 import com.qianlei.node.role.RoleName
 import com.qianlei.node.role.RoleNameAndLeaderId
@@ -21,6 +22,7 @@ class MemoryKVService : KVService {
 
     override fun set(key: String, value: String, ctx: ChannelHandlerContext) {
         map[key] = value
+        ctx.writeAndFlush(buildResponse(mapOf("key" to key, "value" to value)))
     }
 
     override fun getNodeState(): RoleNameAndLeaderId {

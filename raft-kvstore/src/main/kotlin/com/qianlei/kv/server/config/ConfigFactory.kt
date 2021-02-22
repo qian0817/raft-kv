@@ -7,14 +7,22 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 object ConfigFactory {
+    const val JSON = "json"
+    const val YAML = "yaml"
+
     fun parseConfig(filename: String): ServerConfig {
+        val content = Files.readString(Path.of(filename))
         if (filename.endsWith(".yaml")) {
-            val content = Files.readString(Path.of(filename))
-            return Yaml.default.decodeFromString(content)
-        } else if (filename.endsWith(".json")) {
-            val content = Files.readString(Path.of(filename))
-            return Json.decodeFromString(content)
+            return parseConfig(content, YAML)
         }
-        throw IllegalArgumentException("unsupported config type")
+        return parseConfig(content, JSON)
+    }
+
+    fun parseConfig(content: String, type: String): ServerConfig {
+        return when (type) {
+            JSON -> Json.decodeFromString(content)
+            YAML -> Yaml.default.decodeFromString(content)
+            else -> throw IllegalArgumentException("unsupported config type")
+        }
     }
 }

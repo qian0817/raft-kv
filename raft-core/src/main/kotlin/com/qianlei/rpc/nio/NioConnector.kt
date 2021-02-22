@@ -5,12 +5,12 @@ import com.qianlei.node.NodeEndpoint
 import com.qianlei.node.NodeId
 import com.qianlei.rpc.Channel
 import com.qianlei.rpc.Connector
+import com.qianlei.rpc.SocketChannelUtil
 import com.qianlei.rpc.message.*
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.ChannelInitializer
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.SocketChannel
-import io.netty.channel.socket.nio.NioServerSocketChannel
 import mu.KotlinLogging
 
 /**
@@ -32,7 +32,7 @@ class NioConnector(
 
     override fun initialize() {
         val serverBootstrap = ServerBootstrap().group(bossNioEventLoopGroup, workerNioEventLoopGroup)
-            .channel(NioServerSocketChannel::class.java)
+            .channel(SocketChannelUtil.findSupportServerChannel())
             .childHandler(object : ChannelInitializer<SocketChannel>() {
                 override fun initChannel(ch: SocketChannel) {
                     ch.pipeline()
@@ -64,7 +64,7 @@ class NioConnector(
         try {
             getChannel(destinationEndpoint).writeRequestVoteResult(result)
         } catch (e: Exception) {
-            logger.warn { "failed to send RequestVoteRpc to ${destinationEndpoint.id}" }
+            logger.warn { "failed to send RequestVoteResult to ${destinationEndpoint.id}" }
         }
     }
 
@@ -72,7 +72,7 @@ class NioConnector(
         try {
             getChannel(destinationEndpoint).writeAppendEntriesRpc(rpc)
         } catch (e: Exception) {
-            logger.warn { "failed to send RequestVoteRpc to ${destinationEndpoint.id}" }
+            logger.warn { "failed to send AppendEntriesRpc to ${destinationEndpoint.id}" }
         }
     }
 
@@ -80,16 +80,24 @@ class NioConnector(
         try {
             getChannel(destinationEndpoint).writeAppendEntriesResult(result)
         } catch (e: Exception) {
-            logger.warn { "failed to send RequestVoteRpc to ${destinationEndpoint.id}" }
+            logger.warn { "failed to send AppendEntriesResult to ${destinationEndpoint.id}" }
         }
     }
 
     override fun replyInstallSnapshot(result: InstallSnapshotResult, destinationEndpoint: NodeEndpoint) {
-        getChannel(destinationEndpoint).writeInstallSnapshotResult(result)
+        try {
+            getChannel(destinationEndpoint).writeInstallSnapshotResult(result)
+        } catch (e: Exception) {
+            logger.warn { "failed to send InstallSnapshotResult to ${destinationEndpoint.id}" }
+        }
     }
 
     override fun sendInstallSnapshot(rpc: InstallSnapshotRpc, destinationEndpoint: NodeEndpoint) {
-        getChannel(destinationEndpoint).writeInstallSnapshotRpc(rpc)
+        try {
+            getChannel(destinationEndpoint).writeInstallSnapshotRpc(rpc)
+        } catch (e: Exception) {
+            logger.warn { "failed to send InstallSnapshotRpc to ${destinationEndpoint.id}" }
+        }
     }
 
     override fun resetChannels() {

@@ -1,9 +1,9 @@
 package com.qianlei.log
 
 import com.google.common.eventbus.EventBus
-import com.qianlei.log.Log.Companion.ALL_ENTRIES
 import com.qianlei.log.entry.Entry
 import com.qianlei.log.entry.Entry.Companion.KIND_GENERAL
+import com.qianlei.log.entry.Entry.Companion.KIND_NO_OP
 import com.qianlei.log.entry.EntryMeta
 import com.qianlei.log.entry.GeneralEntry
 import com.qianlei.log.entry.NoOpEntry
@@ -18,7 +18,6 @@ import com.qianlei.node.NodeId
 import com.qianlei.rpc.message.AppendEntriesRpc
 import com.qianlei.rpc.message.InstallSnapshotRpc
 import mu.KotlinLogging
-import kotlin.math.min
 
 /**
  *
@@ -54,28 +53,35 @@ abstract class AbstractLog(
      * 获取最后一条日志的元信息
      */
     override val lastEntryMeta: EntryMeta
-        get() = if (entrySequence.isEmpty()) {
-            EntryMeta(Entry.KIND_NO_OP, snapshot.lastIncludeIndex, snapshot.lastIncludeTerm)
-        } else {
-            entrySequence.lastEntry!!.meta
-        }
+        get() = entrySequence.lastEntry?.meta ?: EntryMeta(
+            KIND_NO_OP,
+            snapshot.lastIncludeIndex,
+            snapshot.lastIncludeTerm
+        )
+
 
     /**
      * 创建 AppendEntries 消息
+     *
      */
-    override fun createAppendEntriesRpc(term: Int, selfId: NodeId, nextIndex: Int, maxEntries: Int): AppendEntriesRpc {
+    override fun createAppendEntriesRpc(term: Int, selfId: NodeId, nextIndex: Int): AppendEntriesRpc {
         val nextLogIndex = entrySequence.nextLogIndex
         require(nextIndex <= nextLogIndex) { "illegal next index $nextIndex" }
+        // 判断是否在日志快照中
+        // 如果在日志快照中，应该使用日志快照进行读取
         if (nextIndex <= snapshot.lastIncludeIndex) {
             throw EntryInSnapshotException(nextIndex)
         }
-        // 设置前一条日志的元信息
+        // 获取日志信息
         val entries = if (!entrySequence.isEmpty()) {
-            val maxIndex = if (maxEntries == ALL_ENTRIES) nextLogIndex else min(nextLogIndex, nextIndex + maxEntries)
-            entrySequence.subList(nextIndex, maxIndex)
+            entrySequence.subList(nextIndex, nextLogIndex)
         } else {
             emptyList()
         }
+        // 设置前一条日志的索引和任期
+        // 需要先判断是否在 snapshot 中
+        // 如果在 snapshot 中，那么从 snapshot 中获取信息
+        // 否则从 entrySequence 中获取前一个 log 的信息
         val (prevLogIndex, prevLogTerm) = if (nextIndex == snapshot.lastIncludeIndex + 1) {
             snapshot.lastIncludeIndex to snapshot.lastIncludeTerm
         } else {
@@ -85,6 +91,9 @@ abstract class AbstractLog(
         return AppendEntriesRpc(term, selfId, prevLogIndex, prevLogTerm, entries, commitIndex)
     }
 
+    /**
+     * 创建 InstallSnapshotRpc
+     */
     override fun createInstallSnapshotRpc(term: Int, selfId: NodeId, offset: Int, length: Int): InstallSnapshotRpc {
         val chunk = snapshot.readData(offset, length)
         return InstallSnapshotRpc(
@@ -98,6 +107,10 @@ abstract class AbstractLog(
         )
     }
 
+    /**
+     * 比较日志新旧
+     * 去除最后一条日志的元信息，需要判断 term 和索引 index 信息
+     */
     override fun isNewerThan(lastLogIndex: Int, lastLogTerm: Int): Boolean {
         val entryMeta = lastEntryMeta
         logger.debug {
@@ -107,12 +120,18 @@ abstract class AbstractLog(
         return entryMeta.term > lastLogTerm || entryMeta.index > lastLogIndex
     }
 
+    /**
+     * 追加 NoOpEntry 日志
+     */
     override fun appendEntry(term: Int): NoOpEntry {
         val entry = NoOpEntry(entrySequence.nextLogIndex, term)
         entrySequence.append(entry)
         return entry
     }
 
+    /**
+     * 追加 GeneralEntry 日志
+     */
     override fun appendEntry(term: Int, command: ByteArray): GeneralEntry {
         val entry = GeneralEntry(entrySequence.nextLogIndex, term, command)
         entrySequence.append(entry)

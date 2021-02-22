@@ -219,11 +219,11 @@ class NodeImpl(
         }
     }
 
-    private fun doReplicationLog(member: GroupMember, maxEntries: Int = -1) {
+    private fun doReplicationLog(member: GroupMember) {
         member.replicateNow()
         try {
             logger.trace { "replicate log from ${context.selfId} to ${member.endpoint.id}" }
-            val rpc = context.log.createAppendEntriesRpc(role.term, context.selfId, member.getNextIndex(), maxEntries)
+            val rpc = context.log.createAppendEntriesRpc(role.term, context.selfId, member.getNextIndex())
             context.connector.sendAppendEntries(rpc, member.endpoint)
         } catch (e: EntryInSnapshotException) {
             logger.debug { "log entry ${member.getNextIndex()} in snapshot, replicate with install snapshot RPC" }

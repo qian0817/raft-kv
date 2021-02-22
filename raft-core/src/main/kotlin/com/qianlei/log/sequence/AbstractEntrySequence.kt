@@ -50,8 +50,8 @@ abstract class AbstractEntrySequence(
         if (isEmpty()) {
             return Collections.emptyList()
         }
-        if (fromIndex < doGetFirstLogIndex() || toIndex > doGetLastLogIndex() + 1 || fromIndex > toIndex) {
-            throw IllegalArgumentException("illegal from index $fromIndex  or to index $toIndex")
+        require(fromIndex >= doGetFirstLogIndex() && toIndex <= doGetLastLogIndex() + 1 && fromIndex <= toIndex) {
+            "illegal from index $fromIndex  or to index $toIndex"
         }
         return doSubList(fromIndex, toIndex)
     }
@@ -63,9 +63,7 @@ abstract class AbstractEntrySequence(
 
     override fun append(entry: Entry) {
         logger.debug { "append entry:$entry" }
-        if (entry.index != nextLogIndex) {
-            throw IllegalArgumentException("entry index must be $nextLogIndex")
-        }
+        require(entry.index == nextLogIndex) { "entry index must be $nextLogIndex" }
         doAppend(entry)
         nextLogIndex++
     }
@@ -73,10 +71,9 @@ abstract class AbstractEntrySequence(
     protected abstract fun doAppend(entry: Entry)
 
     override fun removeAfter(index: Int) {
-        if (isEmpty() || index >= doGetLastLogIndex()) {
-            return
+        if (!isEmpty() && index < doGetLastLogIndex()) {
+            doRemoveAfter(index)
         }
-        doRemoveAfter(index)
     }
 
     protected abstract fun doRemoveAfter(index: Int)
