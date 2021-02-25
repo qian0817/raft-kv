@@ -12,6 +12,7 @@ import io.netty.channel.ChannelInitializer
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.SocketChannel
 import mu.KotlinLogging
+import java.util.concurrent.Executors
 
 /**
  *
@@ -29,6 +30,7 @@ class NioConnector(
     private val bossNioEventLoopGroup = NioEventLoopGroup()
     private val inboundChannelGroup = InboundChannelGroup()
     private val outboundChannelGroup = OutboundChannelGroup(workerNioEventLoopGroup, eventBus, selfNodeId)
+    private val executorService = Executors.newCachedThreadPool()
 
     override fun initialize() {
         val serverBootstrap = ServerBootstrap().group(bossNioEventLoopGroup, workerNioEventLoopGroup)
@@ -47,11 +49,13 @@ class NioConnector(
 
 
     override fun sendRequestVote(rpc: RequestVoteRpc, destinationEndpoints: Collection<NodeEndpoint>) {
-        destinationEndpoints.forEach {
-            try {
-                getChannel(it).writeRequestVoteRpc(rpc)
-            } catch (e: Exception) {
-                logger.warn { "failed to send RequestVoteRpc to ${it.id}" }
+        destinationEndpoints.forEach { endpoint ->
+            executorService.submit {
+                try {
+                    getChannel(endpoint).writeRequestVoteRpc(rpc)
+                } catch (e: Exception) {
+                    logger.warn { "failed to send RequestVoteRpc to ${endpoint.id}" }
+                }
             }
         }
     }
@@ -61,42 +65,52 @@ class NioConnector(
     }
 
     override fun replyRequestVote(result: RequestVoteResult, destinationEndpoint: NodeEndpoint) {
-        try {
-            getChannel(destinationEndpoint).writeRequestVoteResult(result)
-        } catch (e: Exception) {
-            logger.warn { "failed to send RequestVoteResult to ${destinationEndpoint.id}" }
+        executorService.submit {
+            try {
+                getChannel(destinationEndpoint).writeRequestVoteResult(result)
+            } catch (e: Exception) {
+                logger.warn { "failed to send RequestVoteResult to ${destinationEndpoint.id}" }
+            }
         }
     }
 
     override fun sendAppendEntries(rpc: AppendEntriesRpc, destinationEndpoint: NodeEndpoint) {
-        try {
-            getChannel(destinationEndpoint).writeAppendEntriesRpc(rpc)
-        } catch (e: Exception) {
-            logger.warn { "failed to send AppendEntriesRpc to ${destinationEndpoint.id}" }
+        executorService.submit {
+            try {
+                getChannel(destinationEndpoint).writeAppendEntriesRpc(rpc)
+            } catch (e: Exception) {
+                logger.warn { "failed to send AppendEntriesRpc to ${destinationEndpoint.id}" }
+            }
         }
     }
 
     override fun replyAppendEntries(result: AppendEntriesResult, destinationEndpoint: NodeEndpoint) {
-        try {
-            getChannel(destinationEndpoint).writeAppendEntriesResult(result)
-        } catch (e: Exception) {
-            logger.warn { "failed to send AppendEntriesResult to ${destinationEndpoint.id}" }
+        executorService.submit {
+            try {
+                getChannel(destinationEndpoint).writeAppendEntriesResult(result)
+            } catch (e: Exception) {
+                logger.warn { "failed to send AppendEntriesResult to ${destinationEndpoint.id}" }
+            }
         }
     }
 
     override fun replyInstallSnapshot(result: InstallSnapshotResult, destinationEndpoint: NodeEndpoint) {
-        try {
-            getChannel(destinationEndpoint).writeInstallSnapshotResult(result)
-        } catch (e: Exception) {
-            logger.warn { "failed to send InstallSnapshotResult to ${destinationEndpoint.id}" }
+        executorService.submit {
+            try {
+                getChannel(destinationEndpoint).writeInstallSnapshotResult(result)
+            } catch (e: Exception) {
+                logger.warn { "failed to send InstallSnapshotResult to ${destinationEndpoint.id}" }
+            }
         }
     }
 
     override fun sendInstallSnapshot(rpc: InstallSnapshotRpc, destinationEndpoint: NodeEndpoint) {
-        try {
-            getChannel(destinationEndpoint).writeInstallSnapshotRpc(rpc)
-        } catch (e: Exception) {
-            logger.warn { "failed to send InstallSnapshotRpc to ${destinationEndpoint.id}" }
+        executorService.submit {
+            try {
+                getChannel(destinationEndpoint).writeInstallSnapshotRpc(rpc)
+            } catch (e: Exception) {
+                logger.warn { "failed to send InstallSnapshotRpc to ${destinationEndpoint.id}" }
+            }
         }
     }
 
